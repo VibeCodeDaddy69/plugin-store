@@ -315,20 +315,20 @@ fn check_license(license: &str, dir: &Path, diags: &mut Vec<LintDiag>) {
     }
 }
 
-/// Community submissions may only contain Skill components.
+/// Community Developer submissions may only contain Skill components.
 /// MCP and Binary require code execution on the user's machine and are
-/// restricted to official / dapp-official plugins until the platform
-/// supports source-code auditing and CI-based compilation.
+/// restricted to OKX Official / Verified Third Party plugins until the
+/// platform supports source-code auditing and CI-based compilation.
 fn check_community_component_restrictions(plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
     if plugin.components.mcp.is_some() {
         diags.push(LintDiag {
             level: DiagLevel::Error,
             code: "E110",
             message:
-                "community plugins cannot include MCP components — \
+                "Community Developer plugins cannot include MCP components — \
                  MCP servers execute code on the user's machine. \
-                 This capability will be available once platform-managed \
-                 source auditing and compilation is supported."
+                 This capability is available to Verified Third Party and \
+                 OKX Official plugins only."
                     .to_string(),
         });
     }
@@ -338,10 +338,10 @@ fn check_community_component_restrictions(plugin: &PluginYaml, diags: &mut Vec<L
             level: DiagLevel::Error,
             code: "E111",
             message:
-                "community plugins cannot include Binary components — \
+                "Community Developer plugins cannot include Binary components — \
                  binaries execute arbitrary code on the user's machine. \
-                 This capability will be available once platform-managed \
-                 source auditing and compilation is supported."
+                 This capability is available to Verified Third Party and \
+                 OKX Official plugins only."
                     .to_string(),
         });
     }
@@ -486,7 +486,7 @@ fn check_permissions(plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
                 code: "W065",
                 message:
                     "wallet.send_transaction is true — this plugin can initiate transfers. \
-                     Community plugins cannot use this permission on first submission."
+                     Community Developer plugins cannot use this permission on first submission."
                         .to_string(),
             });
         }
@@ -496,7 +496,7 @@ fn check_permissions(plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
                 code: "W066",
                 message:
                     "wallet.contract_call is true — this plugin can call smart contracts. \
-                     Community plugins cannot use this permission on first submission."
+                     Community Developer plugins cannot use this permission on first submission."
                         .to_string(),
             });
         }

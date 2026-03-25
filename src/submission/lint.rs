@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use super::plugin_yaml::{
     PluginYaml, VALID_CATEGORIES, VALID_LICENSES, VALID_MCP_TYPES, VALID_RISK_LEVELS,
+    VALID_BUILD_LANGS, LANG_ENTRY_FILES, FORBIDDEN_BINARY_EXTENSIONS,
 };
 
 /// A single lint finding.
@@ -177,6 +178,12 @@ pub fn lint_submission(submission_dir: &Path) -> Result<LintReport> {
     // not by static lint. AI can understand context and intent, while
     // pattern matching produces false positives on natural language.
 
+    // ── 16. Build configuration validation ──────────────────────
+    check_build_config(&plugin, submission_dir, &mut diags);
+
+    // ── 17. Forbidden binary files in submission ────────────────
+    check_forbidden_binaries(submission_dir, &mut diags);
+
     Ok(LintReport {
         diagnostics: diags,
         plugin_name,
@@ -315,33 +322,37 @@ fn check_license(license: &str, dir: &Path, diags: &mut Vec<LintDiag>) {
     }
 }
 
-/// Community Developer submissions may only contain Skill components.
-/// MCP and Binary require code execution on the user's machine and are
-/// restricted to OKX Official / Verified Third Party plugins until the
-/// platform supports source-code auditing and CI-based compilation.
+/// MCP and Binary components require a `build` section so that our CI can
+/// compile the source code. Submitting MCP/Binary without build config means
+/// the developer wants us to trust a pre-built binary — which we don't.
+///
+/// With `build`: Verified Third Party flow (source audit + platform compilation).
+/// Without `build`: Community Developer flow (Skill only).
 fn check_community_component_restrictions(plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
-    if plugin.components.mcp.is_some() {
+    let has_build = plugin.has_build();
+
+    if plugin.components.mcp.is_some() && !has_build {
         diags.push(LintDiag {
             level: DiagLevel::Error,
             code: "E110",
             message:
-                "Community Developer plugins cannot include MCP components — \
-                 MCP servers execute code on the user's machine. \
-                 This capability is available to Verified Third Party and \
-                 OKX Official plugins only."
+                "MCP component requires a `build` section in plugin.yaml — \
+                 we compile your source code, you don't submit pre-built binaries. \
+                 Add build.lang, build.source_dir, and build.binary_name. \
+                 See the developer guide for examples."
                     .to_string(),
         });
     }
 
-    if plugin.components.binary.is_some() {
+    if plugin.components.binary.is_some() && !has_build {
         diags.push(LintDiag {
             level: DiagLevel::Error,
             code: "E111",
             message:
-                "Community Developer plugins cannot include Binary components — \
-                 binaries execute arbitrary code on the user's machine. \
-                 This capability is available to Verified Third Party and \
-                 OKX Official plugins only."
+                "Binary component requires a `build` section in plugin.yaml — \
+                 we compile your source code, you don't submit pre-built binaries. \
+                 Add build.lang, build.source_dir, and build.binary_name. \
+                 See the developer guide for examples."
                     .to_string(),
         });
     }
@@ -752,6 +763,159 @@ fn check_dir_name_match(plugin_name: &str, dir: &Path, diags: &mut Vec<LintDiag>
                     dir_name, plugin_name
                 ),
             });
+        }
+    }
+}
+
+/// Validate the `build` section if present.
+fn check_build_config(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) {
+    let build = match &plugin.build {
+        Some(b) => b,
+        None => return,
+    };
+
+    // Must have a Skill component — Skill is the entry point for everything
+    if plugin.components.skill.is_none() {
+        diags.push(LintDiag {
+            level: DiagLevel::Error,
+            code: "E120",
+            message:
+                "plugins with build config must also include a Skill component — \
+                 SKILL.md is the entry point that tells the AI agent how to use \
+                 your MCP server or binary."
+                    .to_string(),
+        });
+    }
+
+    // Validate lang
+    if !VALID_BUILD_LANGS.contains(&build.lang.as_str()) {
+        diags.push(LintDiag {
+            level: DiagLevel::Error,
+            code: "E121",
+            message: format!(
+                "build.lang '{}' is not supported. Valid: {}",
+                build.lang,
+                VALID_BUILD_LANGS.join(", ")
+            ),
+        });
+    }
+
+    // Validate source_dir exists
+    let source_path = dir.join(&build.source_dir);
+    if !source_path.exists() || !source_path.is_dir() {
+        diags.push(LintDiag {
+            level: DiagLevel::Error,
+            code: "E122",
+            message: format!(
+                "build.source_dir '{}' does not exist or is not a directory",
+                build.source_dir
+            ),
+        });
+    }
+
+    // Validate entry file exists (use default if not specified)
+    let entry_file = build
+        .entry
+        .as_deref()
+        .or_else(|| {
+            LANG_ENTRY_FILES
+                .iter()
+                .find(|(lang, _)| *lang == build.lang.as_str())
+                .map(|(_, entry)| *entry)
+        });
+
+    if let Some(entry) = entry_file {
+        let entry_path = source_path.join(entry);
+        if !entry_path.exists() {
+            diags.push(LintDiag {
+                level: DiagLevel::Error,
+                code: "E123",
+                message: format!(
+                    "build entry file '{}' not found in '{}'",
+                    entry, build.source_dir
+                ),
+            });
+        }
+    }
+
+    // binary_name is required for compiled languages
+    if build.lang != "node" && build.binary_name.is_none() {
+        diags.push(LintDiag {
+            level: DiagLevel::Error,
+            code: "E124",
+            message: format!(
+                "build.binary_name is required for lang '{}' — \
+                 this is the name of the compiled output",
+                build.lang
+            ),
+        });
+    }
+
+    // TypeScript and Python require a main entry point
+    if (build.lang == "typescript" || build.lang == "python") && build.main.is_none() {
+        diags.push(LintDiag {
+            level: DiagLevel::Error,
+            code: "E125",
+            message: format!(
+                "build.main is required for lang '{}' — \
+                 specify the entry file (e.g. src/index.ts or src/main.py)",
+                build.lang
+            ),
+        });
+    }
+
+    // Node.js requires npm_scope
+    if build.lang == "node" && build.npm_scope.is_none() {
+        diags.push(LintDiag {
+            level: DiagLevel::Warning,
+            code: "W125",
+            message:
+                "build.npm_scope not set for Node.js plugin — \
+                 defaults to @plugin-store. Set explicitly if you have a preferred scope."
+                    .to_string(),
+        });
+    }
+
+    // Source size limit (10MB)
+    if source_path.exists() {
+        if let Ok(files) = walk_dir(&source_path) {
+            let total: u64 = files
+                .iter()
+                .filter_map(|f| f.metadata().ok().map(|m| m.len()))
+                .sum();
+            if total > 10 * 1024 * 1024 {
+                diags.push(LintDiag {
+                    level: DiagLevel::Error,
+                    code: "E126",
+                    message: format!(
+                        "source code in '{}' is {} MB (limit: 10 MB)",
+                        build.source_dir,
+                        total / (1024 * 1024)
+                    ),
+                });
+            }
+        }
+    }
+}
+
+/// Reject pre-compiled binary files in submissions.
+/// Developers must submit source code; we compile.
+fn check_forbidden_binaries(dir: &Path, diags: &mut Vec<LintDiag>) {
+    if let Ok(files) = walk_dir(dir) {
+        for file in &files {
+            if let Some(ext) = file.extension().and_then(|e| e.to_str()) {
+                if FORBIDDEN_BINARY_EXTENSIONS.contains(&ext) {
+                    diags.push(LintDiag {
+                        level: DiagLevel::Error,
+                        code: "E130",
+                        message: format!(
+                            "pre-compiled binary file '{}' is not allowed — \
+                             submit source code instead, we handle compilation",
+                            file.strip_prefix(dir).unwrap_or(file).display()
+                        ),
+                    });
+                }
+            }
         }
     }
 }

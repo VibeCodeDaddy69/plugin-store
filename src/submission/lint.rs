@@ -580,7 +580,7 @@ fn check_skill_md(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) {
     check_dangerous_commands_confirmation(&content, diags);
 
     // ── External URL safety analysis ─────────────────────────────
-    check_external_urls(&content, diags);
+    check_external_urls(&content, plugin, diags);
 }
 
 fn check_prompt_injection(content: &str, diags: &mut Vec<LintDiag>) {
@@ -761,9 +761,8 @@ fn check_dangerous_commands_confirmation(content: &str, diags: &mut Vec<LintDiag
 /// 2. Declared API: listed in permissions.network.api_calls (OK but flagged)
 /// 3. Undeclared/dangerous: fetching instructions or sending data to unknown URLs (ERROR)
 /// Analyze external URLs in SKILL.md for security risks.
-/// No declared API list needed — AI review handles nuanced URL analysis.
-/// Lint only catches the most dangerous patterns (remote injection + data exfiltration).
-fn check_external_urls(content: &str, diags: &mut Vec<LintDiag>) {
+/// Uses plugin.api_calls to distinguish expected vs unexpected URLs.
+fn check_external_urls(content: &str, plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
     let url_re = regex::Regex::new(r#"https?://[^\s\)>\]`"']+"#).unwrap();
     let urls: Vec<&str> = url_re.find_iter(content).map(|m| m.as_str()).collect();
 
@@ -837,21 +836,29 @@ fn check_external_urls(content: &str, diags: &mut Vec<LintDiag>) {
         }
     }
 
-    // Warn about any non-safe external URLs (AI review will analyze in detail)
+    // Categorize external URLs: declared in api_calls vs undeclared
+    let declared_apis = &plugin.api_calls;
+
     let external_urls: Vec<&&str> = urls
         .iter()
         .filter(|u| !safe_domains.iter().any(|d| u.contains(d)))
         .collect();
 
-    if !external_urls.is_empty() {
-        let display: Vec<String> = external_urls.iter().take(5).map(|u| format!("'{}'", u)).collect();
+    let undeclared: Vec<&&str> = external_urls
+        .iter()
+        .filter(|u| !declared_apis.iter().any(|d| u.contains(d.as_str())))
+        .copied()
+        .collect();
+
+    if !undeclared.is_empty() {
+        let display: Vec<String> = undeclared.iter().take(5).map(|u| format!("'{}'", u)).collect();
         diags.push(LintDiag {
             level: DiagLevel::Warning,
             code: "W140",
             message: format!(
-                "SKILL.md references {} external URL(s): {}. \
-                 AI review will analyze these for security risks.",
-                external_urls.len(),
+                "SKILL.md references {} external URL(s) not listed in api_calls: {}. \
+                 Add them to api_calls in plugin.yaml so reviewers can verify them.",
+                undeclared.len(),
                 display.join(", ")
             ),
         });

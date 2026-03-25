@@ -63,6 +63,16 @@ components:
   #   asset_pattern: "my-binary-{{target}}"
   #   checksums_asset: checksums.txt
 
+# Chains this plugin operates on (for reviewer reference)
+chains:
+  - ethereum
+
+# External API domains this plugin calls (for reviewer reference)
+# Undeclared URLs in SKILL.md will trigger a lint warning
+api_calls: []
+# api_calls:
+#   - "api.example.com"
+
 # extra:
 #   protocols: []
 #   risk_level: low              # low | medium | high

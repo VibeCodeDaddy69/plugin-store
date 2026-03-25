@@ -15,6 +15,11 @@ pub struct PluginYaml {
     #[serde(default)]
     pub tags: Vec<String>,
     pub components: ComponentsDecl,
+    /// Build configuration for MCP/Binary source code compilation.
+    /// Only available to Verified Third Party and OKX Official plugins.
+    /// Absent = pure Skill plugin (no compilation needed).
+    #[serde(default)]
+    pub build: Option<BuildConfig>,
     #[serde(default)]
     pub permissions: Option<PermissionsDecl>,
     #[serde(default)]
@@ -113,6 +118,30 @@ pub struct ExtraDecl {
     pub risk_level: Option<String>,
 }
 
+/// Build configuration — tells our CI how to compile the plugin's source code.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BuildConfig {
+    /// Programming language: rust, go, typescript, node, python
+    pub lang: String,
+    /// Path to source code directory (relative to submission root)
+    pub source_dir: String,
+    /// Language-specific entry file (Cargo.toml, go.mod, package.json, pyproject.toml)
+    #[serde(default)]
+    pub entry: Option<String>,
+    /// Name of the compiled binary
+    #[serde(default)]
+    pub binary_name: Option<String>,
+    /// Entry point file for TypeScript/Python (e.g. src/index.ts, src/main.py)
+    #[serde(default)]
+    pub main: Option<String>,
+    /// npm scope for Node.js packages (e.g. @plugin-store)
+    #[serde(default)]
+    pub npm_scope: Option<String>,
+    /// Target platforms to build for (optional, defaults to all supported)
+    #[serde(default)]
+    pub targets: Vec<String>,
+}
+
 impl PluginYaml {
     /// Parse a plugin.yaml from a string.
     pub fn from_str(s: &str) -> Result<Self, serde_yaml::Error> {
@@ -124,6 +153,11 @@ impl PluginYaml {
         let content = std::fs::read_to_string(path)?;
         let parsed = Self::from_str(&content)?;
         Ok(parsed)
+    }
+
+    /// Returns true if this plugin requires source code compilation.
+    pub fn has_build(&self) -> bool {
+        self.build.is_some()
     }
 }
 
@@ -143,6 +177,24 @@ pub const VALID_RISK_LEVELS: &[&str] = &["low", "medium", "high"];
 
 /// Valid MCP types.
 pub const VALID_MCP_TYPES: &[&str] = &["node", "python", "binary"];
+
+/// Valid build languages.
+pub const VALID_BUILD_LANGS: &[&str] = &["rust", "go", "typescript", "node", "python"];
+
+/// Expected entry files per language.
+pub const LANG_ENTRY_FILES: &[(&str, &str)] = &[
+    ("rust", "Cargo.toml"),
+    ("go", "go.mod"),
+    ("typescript", "package.json"),
+    ("node", "package.json"),
+    ("python", "pyproject.toml"),
+];
+
+/// File extensions that must NOT appear in source submissions
+/// (indicates pre-compiled binaries, which we don't accept).
+pub const FORBIDDEN_BINARY_EXTENSIONS: &[&str] = &[
+    "exe", "dll", "so", "dylib", "a", "lib", "o", "obj", "wasm", "class", "jar", "pyc", "pyd",
+];
 
 /// Valid license identifiers (common SPDX).
 pub const VALID_LICENSES: &[&str] = &[

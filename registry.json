@@ -110,46 +110,11 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/eth-gas-tracker",
-          "commit": "9280945d8954f382f5851512563cf7f8ab03486b"
+          "commit": "dc67b28012210b56d07ea9d92dcda680f4e254c8"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
       "alias": "ETH Gas Tracker"
-    },
-    {
-      "name": "go-echo-cli",
-      "version": "1.0.0",
-      "description": "A Go-based echo CLI with text transformations (sha256, md5, hex encode/decode, length, repeat)",
-      "author": {
-        "name": "yz06276"
-      },
-      "category": "utility",
-      "tags": [
-        "go",
-        "text-processing",
-        "hashing"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store-community",
-          "dir": "skills/go-echo-cli",
-          "commit": "9280945d8954f382f5851512563cf7f8ab03486b"
-        },
-        "binary": {
-          "repo": "okx/plugin-store",
-          "asset_pattern": "go-echo-cli-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "community/go-echo-cli@1.0.0"
-        }
-      },
-      "link": "https://github.com/okx/plugin-store-community",
-      "build": {
-        "lang": "go",
-        "source_repo": "yz06276/go-echo-cli",
-        "source_commit": "89f239a4b05f54068eae19df20787112bbc26010",
-        "binary_name": "go-echo-cli"
-      }
     },
     {
       "name": "rust-echo-cli",
@@ -169,7 +134,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/rust-echo-cli",
-          "commit": "9280945d8954f382f5851512563cf7f8ab03486b"
+          "commit": "dc67b28012210b56d07ea9d92dcda680f4e254c8"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -205,7 +170,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/signal-tracker",
-          "commit": "9280945d8954f382f5851512563cf7f8ab03486b"
+          "commit": "dc67b28012210b56d07ea9d92dcda680f4e254c8"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -243,7 +208,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "9280945d8954f382f5851512563cf7f8ab03486b"
+          "commit": "dc67b28012210b56d07ea9d92dcda680f4e254c8"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",

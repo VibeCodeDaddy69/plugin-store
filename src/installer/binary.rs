@@ -93,9 +93,9 @@ impl BinaryInstaller {
         }
 
         // Create a canonical symlink/copy without the platform suffix so the binary
-        // is accessible by its base name (e.g. "strategy-ranking-sniper").
+        // is accessible by its base name (e.g. "signal-tracker").
         let canonical_name = asset_pattern.replace("-{target}", "").replace("{target}", "");
-        if !canonical_name.is_empty() && canonical_name != asset_name {
+        let returned_path = if !canonical_name.is_empty() && canonical_name != asset_name {
             let canonical_path = install_path.join(&canonical_name);
             #[cfg(unix)]
             {
@@ -108,9 +108,12 @@ impl BinaryInstaller {
             {
                 std::fs::copy(&binary_path, &canonical_path)?;
             }
-        }
+            canonical_path
+        } else {
+            binary_path
+        };
 
-        Ok(binary_path)
+        Ok(returned_path)
     }
 
 }

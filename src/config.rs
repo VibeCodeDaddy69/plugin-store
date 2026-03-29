@@ -1,4 +1,4 @@
-pub const GITHUB_OWNER: &str = "ganlinux";
+pub const GITHUB_OWNER: &str = "okx";
 pub const CLI_REPO: &str = "plugin-store";
 pub const REGISTRY_REPO: &str = "plugin-store";
 

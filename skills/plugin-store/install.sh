@@ -19,7 +19,7 @@ set -e
 #   Windows: see install.ps1 (PowerShell)
 # ──────────────────────────────────────────────────────────────
 
-REPO="ganlinux/plugin-store"
+REPO="okx/plugin-store"
 BINARY="plugin-store"
 INSTALL_DIR="$HOME/.local/bin"
 CACHE_DIR="$HOME/.plugin-store"

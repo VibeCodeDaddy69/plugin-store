@@ -55,7 +55,7 @@ When `SkillComponent.path` is absent, `SkillInstaller::discover_all()` fetches t
 
 ### Self-Update
 
-`plugin-store self-update` downloads the latest release binary from `ganlinux/plugin-store` on GitHub, resolves the platform target via `utils::platform::current_target()`, and does an atomic rename-based replacement of the running executable with rollback on failure.
+`plugin-store self-update` downloads the latest release binary from `okx/plugin-store` on GitHub, resolves the platform target via `utils::platform::current_target()`, and does an atomic rename-based replacement of the running executable with rollback on failure.
 
 ## Key Commands
 

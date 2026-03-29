@@ -17,7 +17,7 @@ set -e
 #   - strategy-signal-tracker
 # ──────────────────────────────────────────────────────────────
 
-REPO="ganlinux/plugin-store"
+REPO="okx/plugin-store"
 INSTALL_DIR="$HOME/.cargo/bin"
 
 BINARIES="plugin-store dapp-hyperliquid strategy-memepump-scanner strategy-ranking-sniper strategy-signal-tracker"

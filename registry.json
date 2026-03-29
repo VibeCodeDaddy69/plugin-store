@@ -94,7 +94,6 @@
     },
     {
       "name": "signal-tracker",
-      "alias": "Signal Tracker",
       "version": "1.0.0",
       "description": "Track smart money wallet activity and aggregated buy signals via onchainos CLI",
       "author": {
@@ -112,18 +111,20 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/signal-tracker",
-          "commit": "e8e455628bdd8aa143a0b9ffd281bfe2a7f64b32"
+          "commit": "d31e80343356501674c1e257a5448beae826164c"
         }
       },
-      "extra": {
-        "protocols": [],
-        "risk_level": "low"
-      },
-      "link": "https://github.com/okx/plugin-store-community"
+      "link": "https://github.com/okx/plugin-store-community",
+      "alias": "Signal Tracker",
+      "build": {
+        "lang": "rust",
+        "source_repo": "ganlinux/signal-tracker",
+        "source_commit": "843f2e633f084f1a4732e18a3f569067e4f98b29",
+        "binary_name": "signal-tracker"
+      }
     },
     {
       "name": "sol-token-guard",
-      "alias": "Solana Token Safety Guard",
       "version": "1.0.0",
       "description": "Comprehensive Solana token safety analysis — security scan, holder distribution, and risk scoring",
       "author": {
@@ -142,14 +143,11 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "e8e455628bdd8aa143a0b9ffd281bfe2a7f64b32"
+          "commit": "d31e80343356501674c1e257a5448beae826164c"
         }
       },
-      "extra": {
-        "protocols": [],
-        "risk_level": "low"
-      },
-      "link": "https://github.com/okx/plugin-store-community"
+      "link": "https://github.com/okx/plugin-store-community",
+      "alias": "Solana Token Safety Guard"
     }
   ]
 }

@@ -39,6 +39,9 @@ pub async fn execute(name: &str) -> Result<()> {
             if let Some(ref py) = p.components.python {
                 println!("  {} Python ({})", "✔".green(), py.install_command);
             }
+            if let Some(ref npm) = p.components.npm {
+                println!("  {} npm ({})", "✔".green(), npm.install_command);
+            }
 
             if let Some(ref defi) = p.extra {
                 println!("\n{}:", "DeFi Info".bold());

@@ -1,0 +1,285 @@
+# Skill AI Review — validates SKILL.md changes before release
+#
+# Triggers when skills/ files change. Uses Claude to check for:
+# - Structural completeness (all required sections present)
+# - Command references match actual CLI (cargo build + --help)
+# - Version consistency (SKILL.md vs Cargo.toml vs plugin.json)
+# - URL validity
+# - Logic errors (contradictions, broken flows, dead references)
+# - Prompt injection patterns
+# - Bilingual consistency (EN/ZH)
+
+name: "Skill Review"
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - '.claude-plugin/**'
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - '.claude-plugin/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  skill-review:
+    name: Skill AI Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust and build CLI
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release
+
+      # ── Step 1: Static checks (no AI needed) ──────────────────
+      - name: "Static checks"
+        id: static
+        run: |
+          ERRORS=""
+
+          # Check SKILL.md exists
+          SKILL="skills/plugin-store/SKILL.md"
+          if [ ! -f "$SKILL" ]; then
+            ERRORS="${ERRORS}\n❌ SKILL.md not found at $SKILL"
+          fi
+
+          # Check plugin.json exists
+          PJSON="skills/plugin-store/.claude-plugin/plugin.json"
+          if [ ! -f "$PJSON" ]; then
+            ERRORS="${ERRORS}\n❌ plugin.json not found at $PJSON"
+          fi
+
+          # Check marketplace.json exists
+          MJSON=".claude-plugin/marketplace.json"
+          if [ ! -f "$MJSON" ]; then
+            ERRORS="${ERRORS}\n❌ marketplace.json not found at $MJSON"
+          fi
+
+          # Version consistency: Cargo.toml vs SKILL.md vs plugin.json
+          CARGO_VER=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          SKILL_VER=$(grep 'version:' "$SKILL" | head -2 | tail -1 | sed 's/.*"\(.*\)".*/\1/')
+          PLUGIN_VER=$(jq -r '.version' "$PJSON" 2>/dev/null || echo "MISSING")
+
+          echo "Cargo.toml version:  $CARGO_VER"
+          echo "SKILL.md version:    $SKILL_VER"
+          echo "plugin.json version: $PLUGIN_VER"
+
+          if [ "$CARGO_VER" != "$SKILL_VER" ]; then
+            ERRORS="${ERRORS}\n❌ Version mismatch: Cargo.toml=$CARGO_VER vs SKILL.md=$SKILL_VER"
+          fi
+          if [ "$CARGO_VER" != "$PLUGIN_VER" ]; then
+            ERRORS="${ERRORS}\n❌ Version mismatch: Cargo.toml=$CARGO_VER vs plugin.json=$PLUGIN_VER"
+          fi
+
+          # Check all CLI commands in SKILL.md actually exist
+          echo ""
+          echo "Checking CLI commands referenced in SKILL.md..."
+          CLI="./target/release/plugin-store"
+          HELP=$($CLI --help 2>&1)
+
+          # Extract commands mentioned in SKILL.md (plugin-store <cmd>)
+          CMDS=$(grep -oE 'plugin-store (list|search|info|install|uninstall|update|installed|registry|self-update|init|lint)' "$SKILL" | awk '{print $2}' | sort -u)
+          for cmd in $CMDS; do
+            if echo "$HELP" | grep -q "$cmd"; then
+              echo "  ✓ plugin-store $cmd — exists"
+            else
+              ERRORS="${ERRORS}\n❌ SKILL.md references 'plugin-store $cmd' but CLI does not have this command"
+            fi
+          done
+
+          # Check SKILL.md required sections
+          for section in "Pre-flight Checks" "Skill Routing" "Command Index" "Error Handling" "Operation Flow"; do
+            if ! grep -q "$section" "$SKILL"; then
+              ERRORS="${ERRORS}\n⚠️ SKILL.md missing recommended section: $section"
+            fi
+          done
+
+          # Check frontmatter has required fields
+          for field in "name:" "description:" "license:" "metadata:"; do
+            if ! head -10 "$SKILL" | grep -q "$field"; then
+              ERRORS="${ERRORS}\n❌ SKILL.md frontmatter missing: $field"
+            fi
+          done
+
+          # Check URLs in SKILL.md are not obviously broken
+          URLS=$(grep -oE 'https://[^ )>"]+' "$SKILL" | sort -u)
+          for url in $URLS; do
+            HTTP=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null || echo "000")
+            if [ "$HTTP" = "000" ] || [ "$HTTP" = "404" ]; then
+              ERRORS="${ERRORS}\n⚠️ URL may be broken ($HTTP): $url"
+            fi
+          done
+
+          if [ -n "$ERRORS" ]; then
+            echo ""
+            echo "=== Issues found ==="
+            echo -e "$ERRORS"
+            echo ""
+            echo "errors_found=true" >> "$GITHUB_OUTPUT"
+            echo -e "$ERRORS" > /tmp/static_errors.txt
+          else
+            echo ""
+            echo "✓ All static checks passed"
+            echo "errors_found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Step 2: AI Review (Claude via Anthropic API) ───────────
+      - name: "AI Skill Review"
+        id: ai_review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::No ANTHROPIC_API_KEY — skipping AI review"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+          SKILL="skills/plugin-store/SKILL.md"
+          CLI_HELP=$(./target/release/plugin-store --help 2>&1)
+          STATIC_ERRORS=""
+          [ -f /tmp/static_errors.txt ] && STATIC_ERRORS=$(cat /tmp/static_errors.txt)
+
+          # Build the review prompt
+          cat > /tmp/skill_review_prompt.txt << 'PROMPT_END'
+          You are a QA engineer reviewing a SKILL.md file for the Plugin Store — an AI agent skill that manages plugin discovery, installation, and development workflows.
+
+          Review the SKILL.md for these categories of issues:
+
+          ## 1. Structural Completeness
+          - Are all required sections present? (Pre-flight, Commands, Routing, Error Handling, Rules)
+          - Is the YAML frontmatter complete and valid?
+          - Are the <rules> sections (must/should/never) consistent with the documented behavior?
+
+          ## 2. Command Accuracy
+          - Do all `plugin-store` commands referenced in SKILL.md match the actual CLI help output?
+          - Are command flags and parameters accurate?
+          - Are example outputs realistic?
+
+          ## 3. Logic Consistency
+          - Are there contradictions between sections?
+          - Do the Operation Flows make sense end-to-end?
+          - Is the Pre-flight Check sequence logical?
+          - Are version numbers consistent?
+
+          ## 4. Security
+          - Any prompt injection patterns?
+          - Any instructions that could lead to data leakage?
+          - Are <rules> sections properly constraining behavior?
+          - Is the self-update mechanism safe?
+
+          ## 5. Developer Workflow
+          - Is the plugin submission workflow complete and accurate?
+          - Are source code requirements per language correct?
+          - Are lint error codes and fixes accurate?
+
+          ## 6. Bilingual Quality
+          - Are Chinese intent keywords in the description comprehensive?
+          - Does the routing table cover both EN and ZH intents?
+
+          Produce a concise report in this format:
+
+          ### Summary
+          [1-2 sentences: overall quality assessment]
+
+          ### Issues Found
+          - 🔴 Critical: [must fix — blocks release]
+          - 🟡 Important: [should fix]
+          - 🔵 Minor: [nice to have]
+
+          ### Verdict
+          [✅ Ready to ship | ⚠️ Fix issues first | ❌ Major problems found]
+
+          If no issues found, just say "✅ Ready to ship — no issues found."
+          PROMPT_END
+
+          # Build API request
+          jq -n \
+            --arg model "claude-sonnet-4-20250514" \
+            --rawfile prompt /tmp/skill_review_prompt.txt \
+            --rawfile skill "$SKILL" \
+            --arg cli_help "$CLI_HELP" \
+            --arg static_errors "$STATIC_ERRORS" \
+            '{
+              model: $model,
+              max_tokens: 4096,
+              messages: [{
+                role: "user",
+                content: ($prompt + "\n\n---\n\n# SKILL.md Content\n\n" + $skill + "\n\n---\n\n# CLI --help Output\n\n```\n" + $cli_help + "\n```\n\n---\n\n# Static Check Results\n\n" + $static_errors)
+              }]
+            }' > /tmp/skill_review_request.json
+
+          HTTP_CODE=$(curl -s -o /tmp/skill_review_response.json -w "%{http_code}" \
+            https://api.anthropic.com/v1/messages \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d @/tmp/skill_review_request.json)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            jq -r '.content[0].text' /tmp/skill_review_response.json > /tmp/skill_review.md
+            echo "AI review completed"
+            cat /tmp/skill_review.md
+          else
+            echo "::warning::AI review API returned HTTP ${HTTP_CODE}"
+            echo "AI review unavailable (HTTP ${HTTP_CODE})" > /tmp/skill_review.md
+          fi
+
+      # ── Step 3: Post results ───────────────────────────────────
+      - name: "Post review to PR"
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let staticErrors = '';
+            try { staticErrors = fs.readFileSync('/tmp/static_errors.txt', 'utf8'); } catch(e) {}
+
+            let aiReview = '';
+            try { aiReview = fs.readFileSync('/tmp/skill_review.md', 'utf8'); } catch(e) {}
+
+            const body = [
+              '## 🔍 Skill Review Report',
+              '',
+              '### Static Checks',
+              staticErrors ? '```\n' + staticErrors + '\n```' : '✅ All static checks passed',
+              '',
+              '### AI Review',
+              aiReview || '⏭️ Skipped (no API key)',
+              '',
+              '---',
+              '*Auto-generated by Skill Review workflow*'
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Skill Review Report')
+            );
+
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (botComment) {
+              await github.rest.issues.updateComment({ ...params, comment_id: botComment.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: context.issue.number });
+            }
+
+      - name: "Summary"
+        if: always()
+        run: |
+          echo "=== Skill Review Summary ==="
+          echo "Static errors: ${{ steps.static.outputs.errors_found }}"
+          echo "AI review: ${{ steps.ai_review.outputs.skip == 'true' && 'skipped' || 'completed' }}"
+          [ -f /tmp/skill_review.md ] && cat /tmp/skill_review.md

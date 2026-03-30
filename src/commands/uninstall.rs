@@ -3,6 +3,7 @@ use colored::Colorize;
 use plugin_store::agent::{get_adapter, AgentKind};
 use plugin_store::installer::mcp::McpInstaller;
 use plugin_store::installer::python::PythonInstaller;
+use plugin_store::installer::npm::NpmInstaller;
 use plugin_store::state::StateManager;
 use plugin_store::utils::ui;
 
@@ -61,6 +62,12 @@ pub async fn execute(name: &str, agent_filter: Option<&str>) -> Result<()> {
             if plugin.components_installed.contains(&"python".to_string()) {
                 PythonInstaller::uninstall(&plugin.name)?;
                 ui::print_success("Python package uninstalled");
+            }
+
+            // Remove npm package
+            if plugin.components_installed.contains(&"npm".to_string()) {
+                NpmInstaller::uninstall(&plugin.name)?;
+                ui::print_success("npm package uninstalled");
             }
 
             if let Some(ref binary_path) = agent_record.binary_path {

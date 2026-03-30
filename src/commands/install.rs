@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use colored::Colorize;
 use plugin_store::agent::{detect_agents, get_adapter, AgentKind};
-use plugin_store::installer::{skill::SkillInstaller, mcp::McpInstaller, binary::BinaryInstaller, python::PythonInstaller};
+use plugin_store::installer::{skill::SkillInstaller, mcp::McpInstaller, binary::BinaryInstaller, python::PythonInstaller, npm::NpmInstaller};
 use plugin_store::registry::RegistryManager;
 use plugin_store::state::StateManager;
 use plugin_store::state::models::{InstalledPlugin, InstalledAgent};
@@ -102,6 +102,13 @@ pub async fn execute(
             PythonInstaller::install(&py.install_command, &plugin.name)?;
             ui::print_success(&format!("Python package installed via: {}", py.install_command));
             components.push("python".to_string());
+        }
+
+        // Install Node.js/TypeScript package via npm
+        if let Some(ref npm) = plugin.components.npm {
+            NpmInstaller::install(&npm.install_command, &plugin.name)?;
+            ui::print_success(&format!("npm package installed via: {}", npm.install_command));
+            components.push("npm".to_string());
         }
     }
 

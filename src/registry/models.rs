@@ -45,6 +45,7 @@ pub struct Components {
     pub mcp: Option<McpComponent>,
     pub binary: Option<BinaryComponent>,
     pub python: Option<PythonComponent>,
+    pub npm: Option<NpmComponent>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -112,6 +113,13 @@ pub struct PythonComponent {
     pub source_commit: String,
     #[serde(default)]
     pub requires_python: Option<String>,
+    pub install_command: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NpmComponent {
+    pub source_repo: String,
+    pub source_commit: String,
     pub install_command: String,
 }
 

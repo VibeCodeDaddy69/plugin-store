@@ -110,7 +110,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/eth-gas-monitor",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -134,7 +134,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/eth-gas-tracker",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -158,13 +158,47 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/go-echo-cli",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         },
         "binary": {
           "repo": "okx/plugin-store",
           "asset_pattern": "go-echo-cli-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "community/go-echo-cli@1.0.0"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store-community",
+      "build": {
+        "lang": "go",
+        "source_repo": "yz06276/go-echo-cli",
+        "source_commit": "89f239a4b05f54068eae19df20787112bbc26010",
+        "binary_name": "go-echo-cli"
+      }
+    },
+    {
+      "name": "go-hash-tool",
+      "version": "1.0.0",
+      "description": "A Go-based text echo CLI for hashing and encoding operations",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "utility",
+      "tags": [
+        "go",
+        "hashing"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/go-hash-tool",
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
+        },
+        "binary": {
+          "repo": "okx/plugin-store",
+          "asset_pattern": "go-echo-cli-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "community/go-hash-tool@1.0.0"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -193,7 +227,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/node-echo-cli",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         },
         "npm": {
           "source_repo": "yz06276/node-echo-cli",
@@ -227,7 +261,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/python-echo-cli",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         },
         "python": {
           "source_repo": "yz06276/python-echo-cli",
@@ -262,13 +296,47 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/rust-echo-cli",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         },
         "binary": {
           "repo": "okx/plugin-store",
           "asset_pattern": "rust-echo-cli-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "community/rust-echo-cli@1.0.0"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store-community",
+      "build": {
+        "lang": "rust",
+        "source_repo": "yz06276/rust-echo-cli",
+        "source_commit": "9b6b89720df8971bdae1ff44de7a8923ea60bde0",
+        "binary_name": "rust-echo-cli"
+      }
+    },
+    {
+      "name": "rust-text-tool",
+      "version": "1.0.0",
+      "description": "A Rust-based text transformation CLI — uppercase, lowercase, reverse, base64, rot13",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "utility",
+      "tags": [
+        "rust",
+        "text-processing"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/rust-text-tool",
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
+        },
+        "binary": {
+          "repo": "okx/plugin-store",
+          "asset_pattern": "rust-echo-cli-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "community/rust-text-tool@1.0.0"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -298,7 +366,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/signal-tracker",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -336,7 +404,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -360,7 +428,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/ts-echo-cli",
-          "commit": "11004f25756cf8c4fb2d47eee3c98871c7b1323d"
+          "commit": "c57445dc61ef13d3b73f4462c8deb1de32fd4e24"
         },
         "npm": {
           "source_repo": "yz06276/ts-echo-cli",

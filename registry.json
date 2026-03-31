@@ -93,6 +93,102 @@
       "link": "https://github.com/Polymarket/agent-skills"
     },
     {
+      "name": "scan-live",
+      "alias": "Chain Scanner",
+      "version": "1.0.0",
+      "description": "Chain Scanner Strategy v1.0 — Agentic Wallet TEE signing automated trading bot, 11 Solana Launchpads coverage, safety filter, TP/SL exit system",
+      "author": {
+        "name": "OKX"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "memepump",
+        "scanner",
+        "trading-bot",
+        "launchpad"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/scan-live"
+        }
+      },
+      "extra": {
+        "chains": [
+          "solana"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      },
+      "link": "https://github.com/okx/plugin-store"
+    },
+    {
+      "name": "ranking-sniper",
+      "alias": "Ranking Sniper",
+      "version": "1.0.0",
+      "description": "Ranking Sniper Strategy v1.0 — monitors OKX DEX leaderboard, 25-point safety filter, momentum scoring, 6-layer exit system",
+      "author": {
+        "name": "OKX"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "ranking",
+        "sniper",
+        "leaderboard",
+        "trading-bot",
+        "solana"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/ranking-sniper"
+        }
+      },
+      "extra": {
+        "chains": [
+          "solana"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      },
+      "link": "https://github.com/okx/plugin-store"
+    },
+    {
+      "name": "smart-signal",
+      "alias": "Smart Signal",
+      "version": "1.0.0",
+      "description": "Smart Money Signal Strategy v1.0 — tracks smart money, KOL, whale buy signals with cost-aware TP/SL and session risk control",
+      "author": {
+        "name": "OKX"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "smart-money",
+        "signal",
+        "copy-trading",
+        "whale",
+        "kol"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/smart-signal"
+        }
+      },
+      "extra": {
+        "chains": [
+          "solana"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      },
+      "link": "https://github.com/okx/plugin-store"
+    },
+    {
       "name": "okx-buildx-hackathon-agent-track",
       "version": "1.0.0",
       "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
@@ -112,7 +208,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "cb4be4c872ae8ce9628d33833bae5370bcdfaf15"
+          "commit": "205046a49911df1c992b27ae6526aeadada7409d"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -139,77 +235,11 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/smart-money-copy-trade",
-          "commit": "cb4be4c872ae8ce9628d33833bae5370bcdfaf15"
+          "commit": "205046a49911df1c992b27ae6526aeadada7409d"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
       "alias": "Smart Money Copy Trade"
-    },
-    {
-      "name": "scan-live",
-      "alias": "Chain Scanner",
-      "version": "1.0.0",
-      "description": "Chain Scanner Strategy v1.0 — Agentic Wallet TEE signing automated trading bot, 11 Solana Launchpads coverage, safety filter, TP/SL exit system",
-      "author": { "name": "OKX" },
-      "category": "trading-strategy",
-      "tags": ["solana", "memepump", "scanner", "trading-bot", "launchpad"],
-      "type": "official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/scan-live"
-        }
-      },
-      "extra": {
-        "chains": ["solana"],
-        "protocols": [],
-        "risk_level": "high"
-      },
-      "link": "https://github.com/okx/plugin-store"
-    },
-    {
-      "name": "ranking-sniper",
-      "alias": "Ranking Sniper",
-      "version": "1.0.0",
-      "description": "Ranking Sniper Strategy v1.0 — monitors OKX DEX leaderboard, 25-point safety filter, momentum scoring, 6-layer exit system",
-      "author": { "name": "OKX" },
-      "category": "trading-strategy",
-      "tags": ["ranking", "sniper", "leaderboard", "trading-bot", "solana"],
-      "type": "official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/ranking-sniper"
-        }
-      },
-      "extra": {
-        "chains": ["solana"],
-        "protocols": [],
-        "risk_level": "high"
-      },
-      "link": "https://github.com/okx/plugin-store"
-    },
-    {
-      "name": "smart-signal",
-      "alias": "Smart Signal",
-      "version": "1.0.0",
-      "description": "Smart Money Signal Strategy v1.0 — tracks smart money, KOL, whale buy signals with cost-aware TP/SL and session risk control",
-      "author": { "name": "OKX" },
-      "category": "trading-strategy",
-      "tags": ["smart-money", "signal", "copy-trading", "whale", "kol"],
-      "type": "official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/smart-signal"
-        }
-      },
-      "extra": {
-        "chains": ["solana"],
-        "protocols": [],
-        "risk_level": "high"
-      },
-      "link": "https://github.com/okx/plugin-store"
     }
   ]
 }

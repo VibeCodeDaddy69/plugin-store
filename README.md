@@ -66,6 +66,19 @@ plugin-store installed
 plugin-store registry update
 ```
 
+### Develop & Submit
+
+```bash
+# Scaffold a new plugin (Mode A: direct upload)
+plugin-store init <name>
+
+# Validate before submitting
+plugin-store lint ./submissions/<name>/
+
+# Import a Claude marketplace repo (Mode C: one-click)
+plugin-store import <owner/repo>
+```
+
 ## Plugin Distribution Model
 
 Plugins are distributed differently based on their language:

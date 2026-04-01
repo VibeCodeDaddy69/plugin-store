@@ -503,6 +503,44 @@ fn check_components(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) 
                 }
             }
         }
+        // ── External repo validation (Mode B/C) ──
+        if skill.is_external() {
+            let repo = skill.repo.as_deref().unwrap_or("");
+            // Validate repo format: owner/name
+            if !repo.contains('/') || repo.starts_with("https://") {
+                diags.push(LintDiag {
+                    level: DiagLevel::Error,
+                    code: "E070",
+                    message: format!(
+                        "skill.repo '{}' must be in 'owner/repo' format, not a URL",
+                        repo
+                    ),
+                });
+            }
+            // Validate commit SHA
+            match &skill.commit {
+                None => {
+                    diags.push(LintDiag {
+                        level: DiagLevel::Error,
+                        code: "E071",
+                        message: "skill.commit is required when skill.repo is set (external repo mode). \
+                                  Get it with: git rev-parse HEAD".to_string(),
+                    });
+                }
+                Some(sha) if sha.len() != 40 || !sha.chars().all(|c| c.is_ascii_hexdigit()) => {
+                    diags.push(LintDiag {
+                        level: DiagLevel::Error,
+                        code: "E072",
+                        message: format!(
+                            "skill.commit '{}' must be a full 40-character hex SHA",
+                            sha
+                        ),
+                    });
+                }
+                _ => {}
+            }
+        }
+
         if skill.dir.is_none() && skill.path.is_none() && skill.repo.is_none() {
             diags.push(LintDiag {
                 level: DiagLevel::Warning,

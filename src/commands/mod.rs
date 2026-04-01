@@ -9,6 +9,7 @@ pub mod registry_update;
 pub mod self_update;
 pub mod init;
 pub mod lint;
+pub mod import;
 
 use clap::Subcommand;
 
@@ -77,6 +78,14 @@ pub enum Commands {
     Lint {
         /// Path to the plugin submission directory
         path: String,
+    },
+    /// Import a Claude marketplace-compatible repo as a plugin submission
+    Import {
+        /// GitHub repo (owner/repo format)
+        repo: String,
+        /// Skip confirmation prompts
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
 }
 

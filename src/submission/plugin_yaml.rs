@@ -73,9 +73,22 @@ pub struct SkillDecl {
     /// Explicit path to a single SKILL.md file
     #[serde(default)]
     pub path: Option<String>,
-    /// External repo (for dapp-official plugins that host their own skills)
+    /// External repo (for plugins that host skills in their own repo).
+    /// When set, SKILL.md + scripts + assets are fetched from this repo.
+    /// Compatible with Claude marketplace format repos.
     #[serde(default)]
     pub repo: Option<String>,
+    /// Pinned commit SHA for external repo (full 40-char hex).
+    /// Required when `repo` points to an external repo.
+    #[serde(default)]
+    pub commit: Option<String>,
+}
+
+impl SkillDecl {
+    /// Returns true if this skill references an external repo (not community repo).
+    pub fn is_external(&self) -> bool {
+        self.repo.is_some() && self.dir.is_none()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

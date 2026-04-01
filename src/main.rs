@@ -35,5 +35,6 @@ async fn main() -> anyhow::Result<()> {
         },
         Commands::Init { name } => commands::init::execute(&name),
         Commands::Lint { path } => commands::lint::execute(&path),
+        Commands::Import { repo, yes } => commands::import::execute(&repo, yes).await,
     }
 }

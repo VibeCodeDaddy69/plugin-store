@@ -192,6 +192,32 @@
       },
       "link": "https://github.com/okx/plugin-store-community",
       "alias": "Top Rank Tokens Sniper - 榜单狙击手"
+    },
+    {
+      "name": "okx-buildx-hackathon-agent-track",
+      "alias": "OKX Build X Hackathon",
+      "version": "1.0.0",
+      "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
+      "author": {
+        "name": "OKX"
+      },
+      "category": "utility",
+      "tags": [
+        "hackathon",
+        "xlayer",
+        "onchainos",
+        "uniswap",
+        "moltbook"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/okx-buildx-hackathon-agent-track",
+          "commit": "5c3d8853e6eac6d08273854a2bf787e1dcfc07a1"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store-community"
     }
   ]
 }

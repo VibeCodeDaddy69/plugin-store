@@ -20,7 +20,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/meme-trench-scanner",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/meme-trench-scanner",
@@ -50,7 +50,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
@@ -110,7 +110,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/polymarket-agent-skills",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/Polymarket/agent-skills",
@@ -138,7 +138,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/smart-money-signal-copy-trade",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/smart-money-signal-copy-trade",
@@ -167,7 +167,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/test-rust-cli",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -207,7 +207,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/top-rank-tokens-sniper",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/top-rank-tokens-sniper",
@@ -239,7 +239,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-ai",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/Uniswap/uniswap-ai",
@@ -270,7 +270,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-cca-configurator",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-configurator",
@@ -302,7 +302,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-cca-deployer",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-deployer",
@@ -334,7 +334,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-liquidity-planner",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-liquidity-planner",
@@ -366,7 +366,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-pay-with-any-token",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
@@ -398,7 +398,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-swap-integration",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-integration",
@@ -430,7 +430,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-swap-planner",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-planner",
@@ -462,7 +462,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-v4-security-foundations",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
@@ -494,7 +494,7 @@
         "skill": {
           "repo": "okx/plugin-store",
           "dir": "skills/uniswap-viem-integration",
-          "commit": "512b488cb618bdb4e829ebb90c5707ee61e3f083"
+          "commit": "ac60a54c1d0a329acd211f68f496a5ad528a1202"
         }
       },
       "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-viem-integration",

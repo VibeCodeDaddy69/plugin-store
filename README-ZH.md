@@ -1,4 +1,8 @@
-# OKX Plugin Store
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/cover_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/cover_light.png">
+  <img alt="OKX Plugin Store" src="assets/cover_dark.png" width="100%">
+</picture>
 
 [English](README.md) | [中文](README-ZH.md)
 

@@ -38,6 +38,9 @@ pub struct AddLiquidityArgs {
     /// Dry run -- build calldata but do not broadcast
     #[arg(long)]
     pub dry_run: bool,
+    /// Confirm and broadcast the transaction (without this flag, prints a preview only)
+    #[arg(long)]
+    pub confirm: bool,
 }
 
 pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
@@ -89,7 +92,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         if allowance_a < args.amount_a_desired {
             println!("Approving tokenA ({}) for Router...", token_a);
             let approve_data = build_approve_calldata(router, u128::MAX);
-            let res = wallet_contract_call(CHAIN_ID, &token_a, &approve_data, true, false).await?;
+            let res = wallet_contract_call(CHAIN_ID, &token_a, &approve_data, args.confirm, false).await?;
             println!("Approve tokenA tx: {}", extract_tx_hash(&res));
             sleep(Duration::from_secs(5)).await;
         }
@@ -99,7 +102,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         if allowance_b < amount_b_desired {
             println!("Approving tokenB ({}) for Router...", token_b);
             let approve_data = build_approve_calldata(router, u128::MAX);
-            let res = wallet_contract_call(CHAIN_ID, &token_b, &approve_data, true, false).await?;
+            let res = wallet_contract_call(CHAIN_ID, &token_b, &approve_data, args.confirm, false).await?;
             println!("Approve tokenB tx: {}", extract_tx_hash(&res));
             sleep(Duration::from_secs(5)).await;
         }
@@ -119,7 +122,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         deadline,
     );
 
-    let result = wallet_contract_call(CHAIN_ID, router, &calldata, true, args.dry_run).await?;
+    let result = wallet_contract_call(CHAIN_ID, router, &calldata, args.confirm, args.dry_run).await?;
 
     let tx_hash = extract_tx_hash(&result);
     println!(

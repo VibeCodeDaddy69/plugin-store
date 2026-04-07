@@ -22,6 +22,9 @@ pub struct ClaimRewardsArgs {
     /// Dry run -- build calldata but do not broadcast
     #[arg(long)]
     pub dry_run: bool,
+    /// Confirm and broadcast the transaction (without this flag, prints a preview only)
+    #[arg(long)]
+    pub confirm: bool,
 }
 
 pub async fn run(args: ClaimRewardsArgs) -> anyhow::Result<()> {
@@ -78,7 +81,7 @@ pub async fn run(args: ClaimRewardsArgs) -> anyhow::Result<()> {
     // Selector: 0xc00007b0
     let calldata = format!("0xc00007b0{}", pad_address(&wallet));
 
-    let result = wallet_contract_call(CHAIN_ID, &gauge_addr, &calldata, true, args.dry_run).await?;
+    let result = wallet_contract_call(CHAIN_ID, &gauge_addr, &calldata, args.confirm, args.dry_run).await?;
 
     let tx_hash = extract_tx_hash(&result);
     println!(

@@ -35,6 +35,9 @@ pub struct RemoveLiquidityArgs {
     /// Dry run -- build calldata but do not broadcast
     #[arg(long)]
     pub dry_run: bool,
+    /// Confirm and broadcast the transaction (without this flag, prints a preview only)
+    #[arg(long)]
+    pub confirm: bool,
 }
 
 pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
@@ -86,7 +89,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
         if lp_allowance < liquidity_to_remove {
             println!("Approving LP token ({}) for Router...", pool_addr);
             let approve_data = build_approve_calldata(router, u128::MAX);
-            let res = wallet_contract_call(CHAIN_ID, &pool_addr, &approve_data, true, false).await?;
+            let res = wallet_contract_call(CHAIN_ID, &pool_addr, &approve_data, args.confirm, false).await?;
             println!("Approve LP tx: {}", extract_tx_hash(&res));
             sleep(Duration::from_secs(3)).await;
         }
@@ -105,7 +108,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
         deadline,
     );
 
-    let result = wallet_contract_call(CHAIN_ID, router, &calldata, true, args.dry_run).await?;
+    let result = wallet_contract_call(CHAIN_ID, router, &calldata, args.confirm, args.dry_run).await?;
 
     let tx_hash = extract_tx_hash(&result);
     println!(

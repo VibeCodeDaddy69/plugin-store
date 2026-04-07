@@ -32,6 +32,9 @@ pub struct SwapArgs {
     /// Dry run -- build calldata but do not broadcast
     #[arg(long)]
     pub dry_run: bool,
+    /// Confirm and broadcast the transaction (without this flag, prints a preview only)
+    #[arg(long)]
+    pub confirm: bool,
 }
 
 pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
@@ -91,7 +94,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
             println!("Approving {} for Router...", token_in);
             let approve_data = build_approve_calldata(router, u128::MAX);
             let approve_result =
-                wallet_contract_call(CHAIN_ID, &token_in, &approve_data, true, false).await?;
+                wallet_contract_call(CHAIN_ID, &token_in, &approve_data, args.confirm, false).await?;
             println!("Approve tx: {}", extract_tx_hash(&approve_result));
             // Wait 3s for approve nonce to clear before swap
             sleep(Duration::from_secs(3)).await;
@@ -111,7 +114,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
         deadline,
     );
 
-    let result = wallet_contract_call(CHAIN_ID, router, &calldata, true, args.dry_run).await?;
+    let result = wallet_contract_call(CHAIN_ID, router, &calldata, args.confirm, args.dry_run).await?;
 
     let tx_hash = extract_tx_hash(&result);
     println!(

@@ -43,6 +43,9 @@ The binary `velodrome-v2` must be available in your PATH.
 
 ## Commands
 
+> **Write operations require `--confirm`**: Run the command first without `--confirm` to preview
+> the transaction details. Add `--confirm` to broadcast.
+
 ### 1. `quote` - Get Swap Quote
 
 Queries Router.getAmountsOut via eth_call (no transaction). Auto-checks both volatile and stable pools unless --stable is specified.

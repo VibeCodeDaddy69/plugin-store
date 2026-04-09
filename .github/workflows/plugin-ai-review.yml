@@ -250,22 +250,18 @@ jobs:
           # the SKILL.md and source code live there, not in the local skills/ dir.
           # Clone the external repo at the pinned commit so AI can review it.
           EXTERNAL_DIR=""
-          SKILL_REPO=$(python3 -c "
-          import yaml
-          with open('${YAML_FILE}') as f:
-              data = yaml.safe_load(f)
-          # Check components.skill.repo first (Mode C marketplace import)
-          skill = data.get('components', {}).get('skill', {})
-          repo = skill.get('repo', '')
-          commit = skill.get('commit', '')
-          # Fallback to build.source_repo (Mode B external build)
-          if not repo:
-              build = data.get('build', {})
-              repo = build.get('source_repo', '')
-              commit = build.get('source_commit', '')
-          if repo and repo != 'okx/plugin-store':
-              print(f'{repo} {commit}')
-          " 2>/dev/null || echo "")
+          # Detect external repo: check components.skill.repo first, then build.source_repo
+          _SKILL_REPO=$(yq '.components.skill.repo // ""' "$YAML_FILE" 2>/dev/null || echo "")
+          _SKILL_COMMIT=$(yq '.components.skill.commit // ""' "$YAML_FILE" 2>/dev/null || echo "")
+          if [ -z "$_SKILL_REPO" ] || [ "$_SKILL_REPO" = "okx/plugin-store" ]; then
+            _SKILL_REPO=$(yq '.build.source_repo // ""' "$YAML_FILE" 2>/dev/null || echo "")
+            _SKILL_COMMIT=$(yq '.build.source_commit // ""' "$YAML_FILE" 2>/dev/null || echo "")
+          fi
+          if [ -n "$_SKILL_REPO" ] && [ "$_SKILL_REPO" != "okx/plugin-store" ]; then
+            SKILL_REPO="$_SKILL_REPO $_SKILL_COMMIT"
+          else
+            SKILL_REPO=""
+          fi
 
           if [ -n "$SKILL_REPO" ]; then
             EXT_REPO=$(echo "$SKILL_REPO" | cut -d' ' -f1)
@@ -275,13 +271,7 @@ jobs:
             EXTERNAL_DIR="/tmp/external-plugin"
             rm -rf "$EXTERNAL_DIR"
             # Also detect build.source_dir for monorepo subdirectory
-            EXT_SOURCE_DIR=$(python3 -c "
-            import yaml
-            with open('${YAML_FILE}') as f:
-                data = yaml.safe_load(f)
-            sd = data.get('build', {}).get('source_dir', '.')
-            print(sd if sd != '.' else '')
-            " 2>/dev/null || echo "")
+            EXT_SOURCE_DIR=$(yq '.build.source_dir // ""' "$YAML_FILE" 2>/dev/null | grep -v '^\.$' || echo "")
 
             if git clone --depth=100 "https://github.com/${EXT_REPO}.git" "$EXTERNAL_DIR" 2>/dev/null; then
               if [ -n "$EXT_COMMIT" ]; then

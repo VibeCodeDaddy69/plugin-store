@@ -1,25 +1,13 @@
 # polymarket
-
 Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon.
 
-**Category**: defi-protocol  
-**Author**: skylavis-sky  
-**License**: MIT
+## Highlights
+- Browse active prediction markets with keyword filtering
+- Buy YES/NO outcome tokens with USDC.e collateral
+- Sell existing positions with limit or market orders
+- View open positions with real-time P&L tracking
+- Cancel individual or bulk orders
+- Auto-generates local signing keys for trading
+- Supports both regular and negative risk markets
+- Direct integration with Polymarket CLOB API
 
-## What it does
-
-Polymarket is a decentralized prediction market where users trade YES/NO outcome tokens for real-world events. This plugin lets AI agents interact with Polymarket's CLOB (Central Limit Order Book) on Polygon.
-
-## Commands
-
-- `list-markets` — search markets
-- `get-market` — fetch prices and liquidity
-- `get-positions` — view open positions
-- `get-orders` — view open orders
-- `buy` — buy outcome tokens
-- `sell` — sell outcome tokens
-- `cancel` — cancel an order
-
-## Source
-
-[skylavis-sky/onchainos-plugins/polymarket](https://github.com/skylavis-sky/onchainos-plugins/tree/main/polymarket)

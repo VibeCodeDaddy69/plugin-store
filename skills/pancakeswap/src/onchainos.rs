@@ -36,8 +36,10 @@ pub async fn wallet_contract_call(
         to,
         "--input-data",
         input_data,
-        "--force",
     ];
+    if confirm {
+        args.push("--force");
+    }
 
     let amt_str: String;
     if let Some(v) = amt {

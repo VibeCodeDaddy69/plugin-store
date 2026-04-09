@@ -80,10 +80,33 @@ pub fn resolve_token_address(symbol_or_addr: &str, chain_id: u64) -> anyhow::Res
 }
 
 /// Convert human-readable token amount to minimal units (wei/atomic).
+/// Uses string-based arithmetic to avoid f64 precision loss for large amounts.
 pub fn human_to_minimal(amount: &str, decimals: u8) -> anyhow::Result<u128> {
-    let f: f64 = amount.parse().map_err(|_| anyhow::anyhow!("Invalid amount: {}", amount))?;
-    if f < 0.0 {
-        anyhow::bail!("Amount must be non-negative");
+    let amount = amount.trim();
+    let (int_str, frac_str) = match amount.find('.') {
+        Some(pos) => (&amount[..pos], &amount[pos + 1..]),
+        None => (amount, ""),
+    };
+    if int_str.is_empty() && frac_str.is_empty() {
+        anyhow::bail!("Invalid amount: {}", amount);
     }
-    Ok((f * 10f64.powi(decimals as i32)) as u128)
+    let int_val: u128 = if int_str.is_empty() {
+        0
+    } else {
+        int_str.parse().map_err(|_| anyhow::anyhow!("Invalid amount: {}", amount))?
+    };
+    let d = decimals as usize;
+    // Pad fractional part to exactly `decimals` digits (truncate if longer)
+    let frac_padded = format!("{:0<width$}", frac_str, width = d);
+    let frac_val: u128 = if d == 0 {
+        0
+    } else {
+        frac_padded[..d].parse().map_err(|_| anyhow::anyhow!("Invalid fractional part: {}", amount))?
+    };
+    let multiplier = 10u128.checked_pow(decimals as u32)
+        .ok_or_else(|| anyhow::anyhow!("Decimals too large: {}", decimals))?;
+    int_val
+        .checked_mul(multiplier)
+        .and_then(|v| v.checked_add(frac_val))
+        .ok_or_else(|| anyhow::anyhow!("Amount overflow: {}", amount))
 }

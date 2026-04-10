@@ -79,7 +79,7 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Step 1: Approve
+    // Step 1: Approve stETH spend — must be mined before step 2 can succeed
     println!("Step 1/2: Approving stETH spend...");
     let approve_result = onchainos::wallet_contract_call(
         chain_id,
@@ -91,8 +91,15 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         args.dry_run,
     )
     .await?;
-    let approve_tx = onchainos::extract_tx_hash(&approve_result);
+    let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result, "Approve")?;
     println!("Approve tx: {}", approve_tx);
+
+    // Wait for approve to be mined before submitting requestWithdrawals.
+    // The contract checks allowance at execution time, so the approve must
+    // land on-chain first.
+    if args.confirm {
+        onchainos::wait_for_receipt(chain_id, &approve_tx, 120).await?;
+    }
 
     // Step 2: Request withdrawal
     println!("Step 2/2: Submitting withdrawal request...");
@@ -106,8 +113,13 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         args.dry_run,
     )
     .await?;
-    let request_tx = onchainos::extract_tx_hash(&request_result);
+    let request_tx = onchainos::extract_tx_hash_or_err(&request_result, "requestWithdrawals")?;
     println!("Request tx: {}", request_tx);
+
+    // Verify requestWithdrawals landed on-chain
+    if args.confirm {
+        onchainos::wait_for_receipt(chain_id, &request_tx, 120).await?;
+    }
     println!();
     println!("Withdrawal request submitted. You will receive an unstETH NFT (ERC-721).");
     println!("Use `lido get-withdrawals` to check status.");

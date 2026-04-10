@@ -483,13 +483,45 @@ jobs:
               printf '%s\n' "## What's Changed" "" "- **${NAME}** v${VERSION} -- ${DESC}" "- Language: ${LANG} | Platforms: ${PLATFORM_COUNT}" "- Install: npx skills add okx/plugin-store --skill ${NAME}" "- ${SRC_LINE}" "" "## New Contributors" "" "- **${CONTRIBUTOR}** made their first contribution" "" "## Contributors" "" "- **${CONTRIBUTOR}**" "" "---" "Published by OKX Plugin Store CI" > "$NOTES_FILE"
 
               echo "Creating release: $TAG with ${PLATFORM_COUNT} binaries"
-              gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
-              gh release create "$TAG" \
+
+              # Strategy: create new release FIRST, then delete old one.
+              # This ensures users always have a working release during transitions.
+              # If the old tag exists, we need to delete it before creating (GitHub requires unique tags).
+              # But we use a temp tag to keep the old release alive until the new one is confirmed.
+
+              # Check if old release exists
+              OLD_RELEASE_EXISTS=false
+              if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+                OLD_RELEASE_EXISTS=true
+                echo "  Existing release found for $TAG — will replace after new release is confirmed"
+              fi
+
+              # Delete old release+tag (required before creating same tag at new commit)
+              if [ "$OLD_RELEASE_EXISTS" = "true" ]; then
+                gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
+              fi
+
+              # Create new release
+              if gh release create "$TAG" \
                 --repo "${{ github.repository }}" \
                 --title "$TITLE" \
                 --notes-file "$NOTES_FILE" \
-                ${BIN}-* checksums.txt 2>&1 && echo "Release created: $TAG" \
-                || echo "::warning::Release create failed for $TAG"
+                ${BIN}-* checksums.txt 2>&1; then
+                echo "Release created: $TAG"
+
+                # If this plugin was renamed, check for old-name releases to clean up
+                # Look for releases matching the binary pattern but with a different plugin name
+                OLD_TAG_PATTERN="plugins/${BIN}@"
+                if [ "$OLD_TAG_PATTERN" != "plugins/${NAME}@" ]; then
+                  OLD_TAG="${OLD_TAG_PATTERN}${VERSION}"
+                  if gh release view "$OLD_TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+                    echo "  Cleaning up old release from rename: $OLD_TAG"
+                    gh release delete "$OLD_TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
+                  fi
+                fi
+              else
+                echo "::warning::Release create failed for $TAG"
+              fi
             else
               echo "::warning::No binaries found for $NAME in artifacts"
               ls -la ${REPO_ROOT}/artifacts/ 2>/dev/null | head -20

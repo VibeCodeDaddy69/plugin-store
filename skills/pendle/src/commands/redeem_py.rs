@@ -84,6 +84,8 @@ pub async fn run(
         "yt_address": yt_address,
         "yt_amount": yt_amount,
         "token_out": token_out,
+        "router": router_to,
+        "calldata": calldata,
         "wallet": wallet,
         "approve_txs": approve_hashes,
         "tx_hash": tx_hash,

@@ -75,6 +75,8 @@ pub async fn run(
         "amount_in": amount_in,
         "token_out": token_out,
         "min_token_out": min_token_out,
+        "router": router_to,
+        "calldata": calldata,
         "wallet": wallet,
         "approve_txs": approve_hashes,
         "tx_hash": tx_hash,

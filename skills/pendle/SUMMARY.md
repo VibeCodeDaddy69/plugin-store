@@ -1,13 +1,14 @@
+
 # pendle
-Pendle Finance yield tokenization plugin for buying/selling PT & YT tokens, managing liquidity, and minting/redeeming yield token pairs.
+Pendle Finance yield tokenization plugin for trading principal tokens (PT), yield tokens (YT), and providing AMM liquidity across multiple chains.
 
 ## Highlights
-- Buy and sell Principal Tokens (PT) for fixed yield exposure
-- Trade Yield Tokens (YT) for floating yield speculation
-- Add and remove single-token liquidity to Pendle AMM pools
-- Mint PT+YT pairs from underlying assets to tokenize yield
-- Redeem PT+YT pairs back to underlying tokens
-- Support for Ethereum, Arbitrum, BSC, and Base networks
+- Buy/sell PT tokens to lock in fixed yield rates
+- Trade YT tokens for floating yield exposure
+- Add/remove single-token AMM liquidity 
+- Mint/redeem PT+YT pairs from underlying assets
+- Support for Ethereum, Arbitrum, BSC, and Base
 - Real-time market data and position tracking
-- Automated ERC-20 approval handling with dry-run previews
+- Integrated ERC-20 approval handling
+- Dry-run capability for transaction preview
 

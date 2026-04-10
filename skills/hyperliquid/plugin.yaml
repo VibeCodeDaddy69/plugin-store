@@ -22,3 +22,4 @@ api_calls:
   - "https://api.hyperliquid.xyz"
   - "https://api.hyperliquid-testnet.xyz"
   - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://app.hyperliquid.xyz"

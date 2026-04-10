@@ -23,9 +23,9 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: publish-pipeline
-  cancel-in-progress: false
+# Concurrency removed — Phase 5 runs in parallel.
+# Registry conflicts are handled by rebase retry (5 attempts) + auto-issue on failure.
+# Release Draft issues are handled by un-draft step at the end.
 
 jobs:
   # ═══════════════════════════════════════════════════════════════
@@ -729,12 +729,40 @@ jobs:
           git diff --staged --quiet && echo "No registry changes" && exit 0
 
           git commit -m "Update registry.json with community plugins"
-          for attempt in 1 2 3; do
+          for attempt in 1 2 3 4 5; do
             if git push; then echo "Registry updated"; exit 0; fi
-            echo "Push failed ($attempt/3), retrying..."
-            git pull --rebase origin main
+            echo "Push failed ($attempt/5), retrying..."
+            git pull --rebase origin main || {
+              echo "::warning::Registry rebase conflict on attempt $attempt — another publish may be running concurrently"
+              git rebase --abort 2>/dev/null || true
+              git reset --hard origin/main
+              # Re-apply our registry changes on top of latest main
+              python3 << 'PYEOF'
+          import json, os
+          with open("registry.json") as f:
+              current = json.load(f)
+          with open("/tmp/community_entries.json") as f:
+              new_entries = json.load(f)
+          old_by_name = {p["name"]: p for p in current.get("plugins", [])}
+          for entry in new_entries:
+              old_by_name[entry["name"]] = entry
+          current["plugins"] = sorted(old_by_name.values(), key=lambda x: x["name"])
+          with open("registry.json", "w") as f:
+              json.dump(current, f, indent=2, ensure_ascii=False)
+              f.write("\n")
+          PYEOF
+              git add registry.json
+              git commit -m "Update registry.json with community plugins (retry $attempt)"
+            }
           done
-          echo "ERROR: Failed to push registry" >&2; exit 1
+          echo "::error::Failed to push registry after 5 attempts — concurrent publish conflict"
+          # Post a warning to the repo
+          gh api repos/${{ github.repository }}/issues \
+            --method POST \
+            -f title="⚠️ Registry update conflict — manual retry needed" \
+            -f body="Phase 5 Publish failed to update registry.json after 5 retries due to concurrent push conflicts. Please re-run the workflow or manually trigger \`workflow_dispatch\` with \`rebuild_all=false\`." \
+            -f labels[]="bug" 2>/dev/null || true
+          exit 1
 
       - name: Un-draft all releases
         env:

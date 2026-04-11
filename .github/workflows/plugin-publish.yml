@@ -391,7 +391,16 @@ jobs:
             case "$LANG" in
               rust)
                 rustup target add ${{ matrix.target }} 2>/dev/null || true
+
+                # For cross-compile targets: add vendored openssl to avoid
+                # missing system OpenSSL dev libraries in Docker containers.
+                # This compiles OpenSSL from source inside the build env.
                 if [ "${{ matrix.cross }}" = "true" ]; then
+                  if grep -q 'openssl' Cargo.lock 2>/dev/null; then
+                    echo "Adding vendored openssl for cross-compilation..."
+                    cargo add openssl --features vendored 2>/dev/null || \
+                      sed -i 's/\[dependencies\]/[dependencies]\nopenssl = { version = "0.10", features = ["vendored"] }/' Cargo.toml 2>/dev/null || true
+                  fi
                   cargo install cross --git https://github.com/cross-rs/cross 2>/dev/null || true
                   cross build --release --target ${{ matrix.target }}
                 else

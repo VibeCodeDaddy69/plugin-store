@@ -2,20 +2,20 @@
 # raydium -- Skill Summary
 
 ## Overview
-The Raydium plugin enables AI agents to interact with the Raydium automated market maker (AMM) on Solana mainnet. It provides comprehensive functionality for token swapping, price discovery, and liquidity pool analysis through direct integration with Raydium's REST APIs and transaction infrastructure.
+This plugin provides comprehensive access to Raydium's automated market maker (AMM) on Solana, enabling users to execute token swaps, query real-time prices, and access detailed pool information. It integrates directly with Raydium's REST APIs and Solana mainnet, offering both read-only operations for price discovery and write operations for actual token swapping with built-in safety mechanisms.
 
 ## Usage
-Install the plugin via the auto-injected dependencies, then use commands like `raydium get-swap-quote` for price discovery or `raydium swap` for executing trades. Always run swaps with `--dry-run` first and confirm with the user before executing real transactions.
+Install the plugin and use commands like `raydium get-swap-quote` for price discovery or `raydium swap` for executing trades. Always preview swaps with `--dry-run` and confirm with users before executing on-chain transactions.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
 | `get-swap-quote` | Get expected output amount and price impact for a token swap |
 | `get-price` | Calculate price ratio between two tokens |
-| `get-token-price` | Fetch USD prices for one or more tokens |
-| `get-pools` | Query pool information by mint addresses or pool IDs |
-| `get-pool-list` | Browse paginated list of all Raydium pools |
-| `swap` | Execute token swap on Raydium (requires user confirmation) |
+| `get-token-price` | Get USD price for one or more tokens |
+| `get-pools` | Query pool information by token pairs or pool IDs |
+| `get-pool-list` | Get paginated list of all Raydium pools |
+| `swap` | Execute token swap on-chain (requires user confirmation) |
 
 ## Triggers
-Activate this skill when users want to swap tokens on Raydium, check token prices, query pool information, or get swap quotes on Solana. Trigger phrases include "swap on raydium", "raydium price", "raydium pool", and "get swap quote raydium".
+Activate when users want to swap tokens on Raydium, check token prices, or explore liquidity pools on Solana. Common trigger phrases include "swap on raydium," "raydium price," "get swap quote," or "raydium pool info."

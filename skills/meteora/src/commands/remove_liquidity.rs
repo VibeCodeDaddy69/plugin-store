@@ -64,14 +64,89 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
 
     // Guard: reject empty positions early (all 70 liquidity shares == 0).
     // DLMM returns Custom(6002) InvalidInput when remove is attempted on an empty position.
-    if !solana_rpc::position_has_liquidity(&pos_data) {
+    // Exception: if --close is set, we can still close the empty position to reclaim rent.
+    let has_liquidity = solana_rpc::position_has_liquidity(&pos_data);
+    if !has_liquidity {
+        if !args.close {
+            let output = serde_json::json!({
+                "ok": false,
+                "error": "Position has no liquidity to remove.",
+                "position": args.position,
+                "lower_bin_id": lower_bin_id,
+                "upper_bin_id": upper_bin_id,
+                "tip": "Run with --close to close the empty position and reclaim ~0.057 SOL rent."
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+            return Ok(());
+        }
+        // Empty position + --close: claim any pending fees, then close.
+        // close_position requires fee_pending fields to be zero first.
+        let lower_idx = meteora_ix::bin_array_index(lower_bin_id);
+        let upper_idx = meteora_ix::bin_array_index(upper_bin_id);
+        let bin_array_lower = meteora_ix::bin_array_pda(&lb_pair, lower_idx);
+        let bin_array_upper = meteora_ix::bin_array_pda(&lb_pair, upper_idx);
+
+        // Resolve token accounts (needed for claim_fee)
+        let ata_x = meteora_ix::get_ata(&wallet, &token_x_mint);
+        let ata_y = meteora_ix::get_ata(&wallet, &token_y_mint);
+        let ata_x_str = ata_x.to_string();
+        let ata_y_str = ata_y.to_string();
+        let mint_x_str = token_x_mint.to_string();
+        let mint_y_str = token_y_mint.to_string();
+        let (user_token_x, ata_x_exists) =
+            solana_rpc::find_token_account(&client, &wallet_str, &mint_x_str, &ata_x_str).await?;
+        let (user_token_y, ata_y_exists) =
+            solana_rpc::find_token_account(&client, &wallet_str, &mint_y_str, &ata_y_str).await?;
+        let user_token_x_pk: Pubkey = if ata_x_exists { user_token_x.parse()? } else { ata_x };
+        let user_token_y_pk: Pubkey = if ata_y_exists { user_token_y.parse()? } else { ata_y };
+
+        if dry_run {
+            let output = serde_json::json!({
+                "ok": true,
+                "dry_run": true,
+                "message": "Dry run: position is empty, will claim pending fees then close account.",
+                "position": args.position,
+                "lower_bin_id": lower_bin_id,
+                "upper_bin_id": upper_bin_id,
+                "will_close_position": true,
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+            return Ok(());
+        }
+        let blockhash = solana_rpc::get_latest_blockhash(&client).await?;
+        let mut instructions = Vec::new();
+        if !ata_x_exists {
+            instructions.push(meteora_ix::ix_create_ata_idempotent(&wallet, &ata_x, &wallet, &token_x_mint));
+        }
+        if !ata_y_exists {
+            instructions.push(meteora_ix::ix_create_ata_idempotent(&wallet, &ata_y, &wallet, &token_y_mint));
+        }
+        instructions.push(meteora_ix::ix_claim_fee(
+            &lb_pair, &position, &bin_array_lower, &bin_array_upper,
+            &wallet, &reserve_x, &reserve_y,
+            &user_token_x_pk, &user_token_y_pk,
+            &token_x_mint, &token_y_mint,
+        ));
+        instructions.push(meteora_ix::ix_close_position_if_empty(&wallet, &position));
+        instructions.push(meteora_ix::ix_set_compute_unit_limit(400_000));
+        let instructions = instructions;
+        let tx_b58 = meteora_ix::build_tx_b58(&instructions, &wallet, blockhash)?;
+        eprintln!("[debug] close-only unsigned_tx_b58={}...", &tx_b58[..32]);
+        let result = onchainos::contract_call_solana(&tx_b58, &meteora_ix::DLMM_PROGRAM.to_string())?;
+        let tx_hash = onchainos::extract_tx_hash(&result);
+        let ok = result["ok"].as_bool().unwrap_or(false)
+            || result["data"]["ok"].as_bool().unwrap_or(false)
+            || !tx_hash.is_empty() && tx_hash != "pending";
         let output = serde_json::json!({
-            "ok": false,
-            "error": "Position has no liquidity to remove.",
+            "ok": ok,
             "position": args.position,
-            "lower_bin_id": lower_bin_id,
-            "upper_bin_id": upper_bin_id,
-            "tip": "Use close-position (not yet implemented) to reclaim rent from an empty position, or the position has already been fully withdrawn."
+            "wallet": wallet_str,
+            "position_closed": ok,
+            "tx_hash": tx_hash,
+            "explorer_url": if !tx_hash.is_empty() && tx_hash != "pending" {
+                format!("https://solscan.io/tx/{}", tx_hash)
+            } else { String::new() },
+            "raw_result": result,
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
         return Ok(());

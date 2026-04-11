@@ -4,7 +4,7 @@ description: "Meteora DLMM plugin for Solana — search liquidity pools, get swa
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
@@ -43,7 +43,7 @@ if ! command -v meteora >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/meteora@0.3.0/meteora-${TARGET}${EXT}" -o ~/.local/bin/meteora${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/meteora@0.3.1/meteora-${TARGET}${EXT}" -o ~/.local/bin/meteora${EXT}
   chmod +x ~/.local/bin/meteora${EXT}
 fi
 ```
@@ -62,7 +62,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"meteora","version":"0.3.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"meteora","version":"0.3.1"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"meteora","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -251,9 +251,9 @@ meteora remove-liquidity --pool <pool_address> --position <position_address> [--
 5. If `--close` is set and `--pct 100`, the position account is closed and ~0.057 SOL is returned
 
 **Notes:**
-- Attempting to remove from an empty position (all liquidity already withdrawn) returns `"ok": false` with a helpful message; no on-chain call is made
+- Attempting to remove from an empty position without `--close` returns `"ok": false` with a helpful tip; no on-chain call is made
 - `--close` only takes effect when `--pct 100` (full removal); partial removals cannot close the position
-- Fees accumulated in the position are NOT automatically claimed by this command — use a separate claim-fees command if available, or the Meteora web UI
+- If the position is already empty (liquidity withdrawn) and `--close` is set, the binary automatically claims any pending fees (`claim_fee`) then closes the account (`close_position_if_empty`) in a single transaction, reclaiming rent
 
 **Examples:**
 ```

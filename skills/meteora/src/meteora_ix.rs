@@ -297,6 +297,76 @@ pub fn ix_remove_liquidity_by_range(
     }
 }
 
+/// Build `claim_fee` instruction.
+/// Claims accumulated trading fees for a position into the owner's token accounts.
+/// Account order from IDL: lb_pair, position, bin_array_lower, bin_array_upper,
+///   sender(signer), reserve_x, reserve_y, user_token_x, user_token_y,
+///   token_x_mint, token_y_mint, token_program, event_authority, program
+#[allow(clippy::too_many_arguments)]
+pub fn ix_claim_fee(
+    lb_pair: &Pubkey,
+    position: &Pubkey,
+    bin_array_lower: &Pubkey,
+    bin_array_upper: &Pubkey,
+    sender: &Pubkey,
+    reserve_x: &Pubkey,
+    reserve_y: &Pubkey,
+    user_token_x: &Pubkey,
+    user_token_y: &Pubkey,
+    token_x_mint: &Pubkey,
+    token_y_mint: &Pubkey,
+) -> Instruction {
+    // sha256("global:claim_fee")[:8]
+    let discriminator: [u8; 8] = [169, 32, 79, 137, 136, 232, 70, 137];
+    let ev_auth = event_authority();
+
+    Instruction {
+        program_id: DLMM_PROGRAM,
+        accounts: vec![
+            AccountMeta::new(*lb_pair, false),
+            AccountMeta::new(*position, false),
+            AccountMeta::new(*bin_array_lower, false),
+            AccountMeta::new(*bin_array_upper, false),
+            AccountMeta::new_readonly(*sender, true),       // sender (signer, not writable per IDL)
+            AccountMeta::new(*reserve_x, false),
+            AccountMeta::new(*reserve_y, false),
+            AccountMeta::new(*user_token_x, false),
+            AccountMeta::new(*user_token_y, false),
+            AccountMeta::new_readonly(*token_x_mint, false),
+            AccountMeta::new_readonly(*token_y_mint, false),
+            AccountMeta::new_readonly(TOKEN_PROGRAM, false),
+            AccountMeta::new_readonly(ev_auth, false),
+            AccountMeta::new_readonly(DLMM_PROGRAM, false),
+        ],
+        data: discriminator.to_vec(),
+    }
+}
+
+/// Build `close_position_if_empty` instruction.
+/// Closes a position account that has no liquidity and no pending fees.
+/// Simpler than `close_position`: does not require bin array accounts.
+/// Returns rent (~0.057 SOL) to rent_receiver.
+pub fn ix_close_position_if_empty(
+    sender: &Pubkey,
+    position: &Pubkey,
+) -> Instruction {
+    // sha256("global:close_position_if_empty")[:8]
+    let discriminator: [u8; 8] = [59, 124, 212, 118, 91, 152, 110, 157];
+    let ev_auth = event_authority();
+
+    Instruction {
+        program_id: DLMM_PROGRAM,
+        accounts: vec![
+            AccountMeta::new(*position, false),          // position (writable)
+            AccountMeta::new_readonly(*sender, true),    // sender (signer)
+            AccountMeta::new(*sender, false),            // rent_receiver (writable)
+            AccountMeta::new_readonly(ev_auth, false),
+            AccountMeta::new_readonly(DLMM_PROGRAM, false),
+        ],
+        data: discriminator.to_vec(),
+    }
+}
+
 /// Build `close_position` instruction.
 /// Must be called after removing ALL liquidity (bps=10000).
 /// Closes the position account and returns rent (~0.057 SOL) to the sender.

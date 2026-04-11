@@ -4,7 +4,7 @@ description: "Interact with pump.fun bonding curves on Solana: buy tokens, sell 
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "1.3.0"
+  version: "0.1.2"
 ---
 
 
@@ -28,7 +28,7 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install pump-fun binary (auto-injected)
 
 ```bash
-REQUIRED_VERSION="0.1.1"
+REQUIRED_VERSION="0.1.2"
 INSTALLED_VERSION=$(pump-fun --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
@@ -85,7 +85,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pump-fun","version":"0.1.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"pump-fun","version":"0.1.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \

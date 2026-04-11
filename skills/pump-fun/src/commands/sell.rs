@@ -63,7 +63,7 @@ pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
     let result =
         onchainos::swap_execute_solana(&args.mint, SOL_MINT, &amount, args.slippage_bps).await?;
 
-    let tx_hash = onchainos::extract_tx_hash(&result).to_string();
+    let tx_hash = onchainos::extract_tx_hash(&result)?;
 
     println!(
         "{}",

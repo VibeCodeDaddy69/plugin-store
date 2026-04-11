@@ -66,13 +66,11 @@ pub async fn wallet_contract_call(
     }
 
     let v: serde_json::Value = serde_json::from_str(&stdout)?;
-    // Propagate onchainos-level errors so callers can see and handle them
     if v.get("ok").and_then(|b| b.as_bool()) == Some(false) {
         let msg = v.get("error")
             .and_then(|e| e.as_str())
             .unwrap_or("unknown onchainos error");
-        eprintln!("  [onchainos error] {}", msg);
-        // Return the value anyway so the caller can decide how to proceed
+        anyhow::bail!("onchainos error: {}", msg);
     }
     Ok(v)
 }
@@ -90,6 +88,12 @@ pub fn extract_tx_hash(r: &serde_json::Value) -> &str {
 /// mint() "Price slippage check" revert that was previously reported as
 /// "LP position minted successfully!").
 pub async fn wait_and_check_receipt(tx_hash: &str, rpc_url: &str) -> anyhow::Result<()> {
+    if !tx_hash.starts_with("0x") || tx_hash.len() < 10 {
+        anyhow::bail!(
+            "Transaction was not broadcast (invalid tx hash: '{}').",
+            tx_hash
+        );
+    }
     let client = reqwest::Client::new();
     let body = serde_json::json!({
         "jsonrpc": "2.0",
@@ -195,6 +199,23 @@ mod tests {
     fn extract_tx_hash_missing_falls_back_to_pending() {
         let v = serde_json::json!({"ok": false});
         assert_eq!(extract_tx_hash(&v), "pending");
+    }
+
+    /// If onchainos returns ok:false (simulation rejection), wait_and_check_receipt
+    /// must immediately fail rather than polling and timing out as a soft-success.
+    #[tokio::test]
+    async fn receipt_pending_hash_returns_err() {
+        let result = wait_and_check_receipt("pending", BSC_RPC).await;
+        assert!(
+            result.is_err(),
+            "Expected Err for 'pending' hash but got Ok — ok:false path would silently succeed"
+        );
+    }
+
+    #[tokio::test]
+    async fn receipt_empty_hash_returns_err() {
+        let result = wait_and_check_receipt("", BSC_RPC).await;
+        assert!(result.is_err());
     }
 }
 

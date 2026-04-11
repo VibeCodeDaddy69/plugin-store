@@ -6,12 +6,14 @@ use anyhow::Result;
 pub async fn run(
     chain_id: u64,
     market: &str,
-    asset: &str,   // token contract address to supply
-    amount: u128,  // raw amount in token's minimal units
+    asset: &str,        // token contract address to supply
+    amount_str: &str,   // human-readable amount (e.g. "1.5" for 1.5 USDC, "0.001" for 0.001 WETH)
     from: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
     let cfg = get_market_config(chain_id, market)?;
+    let asset_decimals = rpc::get_erc20_decimals(asset, cfg.rpc_url).await.unwrap_or(18);
+    let amount = rpc::parse_human_amount(amount_str, asset_decimals)?;
 
     // Resolve wallet address — must not default to zero address
     let wallet = from

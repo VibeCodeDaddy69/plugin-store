@@ -6,12 +6,14 @@ use anyhow::Result;
 pub async fn run(
     chain_id: u64,
     market: &str,
-    asset: &str,   // collateral token address (or base asset address)
-    amount: u128,  // raw amount in token's minimal units
+    asset: &str,        // collateral token address (or base asset address)
+    amount_str: &str,   // human-readable amount (e.g. "0.5" for 0.5 WETH)
     from: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
     let cfg = get_market_config(chain_id, market)?;
+    let asset_decimals = rpc::get_erc20_decimals(asset, cfg.rpc_url).await.unwrap_or(18);
+    let amount = rpc::parse_human_amount(amount_str, asset_decimals)?;
 
     // Resolve wallet address — must not default to zero address
     let wallet = from
@@ -39,6 +41,8 @@ pub async fn run(
     let amount_hex = rpc::pad_u128(amount);
     let withdraw_calldata = format!("0xf3fef3a3{}{}", asset_padded, amount_hex);
 
+    let amount_human = format!("{:.decimals$}", amount as f64 / 10f64.powi(asset_decimals as i32), decimals = asset_decimals as usize);
+
     if dry_run {
         let result = serde_json::json!({
             "ok": true,
@@ -50,6 +54,7 @@ pub async fn run(
                     "action": "Comet.withdraw",
                     "comet": cfg.comet_proxy,
                     "asset": asset,
+                    "amount": amount_human,
                     "amount_raw": amount.to_string(),
                     "calldata": withdraw_calldata
                 }
@@ -77,6 +82,7 @@ pub async fn run(
             "chain_id": chain_id,
             "market": market,
             "asset": asset,
+            "amount": amount_human,
             "amount_raw": amount.to_string(),
             "wallet": wallet,
             "withdraw_tx_hash": withdraw_tx

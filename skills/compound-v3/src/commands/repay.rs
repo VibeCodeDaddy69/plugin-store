@@ -6,7 +6,7 @@ use anyhow::Result;
 pub async fn run(
     chain_id: u64,
     market: &str,
-    amount: Option<u128>, // None = repay all (use min(borrow_balance, wallet_balance))
+    amount_str: Option<&str>, // None = repay all; human-readable (e.g. "5.0")
     from: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
@@ -39,6 +39,10 @@ pub async fn run(
     // Determine repay amount:
     // - If specified: use that amount (capped by borrow balance)
     // - If "repay all": use min(borrow_balance, wallet_balance) to avoid overflow revert
+    let amount: Option<u128> = match amount_str {
+        Some(s) => Some(rpc::parse_human_amount(s, cfg.base_asset_decimals)?),
+        None => None,
+    };
     let repay_amount = match amount {
         Some(a) => a.min(borrow_balance),
         None => {

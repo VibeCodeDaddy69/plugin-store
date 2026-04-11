@@ -46,9 +46,9 @@ enum Commands {
         #[arg(long)]
         asset: String,
 
-        /// Amount in token's minimal units (e.g. 1000000 = 1 USDC)
+        /// Amount in human-readable units (e.g. 1.5 for 1.5 USDC, 0.001 for 0.001 WETH)
         #[arg(long)]
-        amount: u128,
+        amount: String,
 
         /// Sender wallet address (defaults to logged-in wallet)
         #[arg(long)]
@@ -57,9 +57,9 @@ enum Commands {
 
     /// Borrow base asset (implemented via Comet.withdraw)
     Borrow {
-        /// Amount of base asset to borrow in minimal units (e.g. 1000000 = 1 USDC)
+        /// Amount of base asset to borrow in human-readable units (e.g. 0.1 for 0.1 USDC)
         #[arg(long)]
-        amount: u128,
+        amount: String,
 
         /// Sender wallet address (defaults to logged-in wallet)
         #[arg(long)]
@@ -68,9 +68,9 @@ enum Commands {
 
     /// Repay borrowed base asset
     Repay {
-        /// Amount to repay in minimal units. Omit to repay all debt.
+        /// Amount to repay in human-readable units. Omit to repay all debt.
         #[arg(long)]
-        amount: Option<u128>,
+        amount: Option<String>,
 
         /// Sender wallet address (defaults to logged-in wallet)
         #[arg(long)]
@@ -83,9 +83,9 @@ enum Commands {
         #[arg(long)]
         asset: String,
 
-        /// Amount in token's minimal units
+        /// Amount in human-readable units (e.g. 0.001 for 0.001 WETH)
         #[arg(long)]
-        amount: u128,
+        amount: String,
 
         /// Sender wallet address (defaults to logged-in wallet)
         #[arg(long)]
@@ -112,16 +112,16 @@ async fn main() {
             commands::get_position::run(cli.chain, &cli.market, wallet, collateral_asset).await
         }
         Commands::Supply { asset, amount, from } => {
-            commands::supply::run(cli.chain, &cli.market, &asset, amount, from, cli.dry_run).await
+            commands::supply::run(cli.chain, &cli.market, &asset, &amount, from, cli.dry_run).await
         }
         Commands::Borrow { amount, from } => {
-            commands::borrow::run(cli.chain, &cli.market, amount, from, cli.dry_run).await
+            commands::borrow::run(cli.chain, &cli.market, &amount, from, cli.dry_run).await
         }
         Commands::Repay { amount, from } => {
-            commands::repay::run(cli.chain, &cli.market, amount, from, cli.dry_run).await
+            commands::repay::run(cli.chain, &cli.market, amount.as_deref(), from, cli.dry_run).await
         }
         Commands::Withdraw { asset, amount, from } => {
-            commands::withdraw::run(cli.chain, &cli.market, &asset, amount, from, cli.dry_run).await
+            commands::withdraw::run(cli.chain, &cli.market, &asset, &amount, from, cli.dry_run).await
         }
         Commands::ClaimRewards { from } => {
             commands::claim_rewards::run(cli.chain, &cli.market, from, cli.dry_run).await

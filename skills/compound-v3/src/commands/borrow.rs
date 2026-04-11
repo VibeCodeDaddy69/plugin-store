@@ -6,11 +6,12 @@ use anyhow::Result;
 pub async fn run(
     chain_id: u64,
     market: &str,
-    amount: u128,  // raw amount of base asset to borrow (minimal units)
+    amount_str: &str,  // human-readable amount (e.g. "0.1" for 0.1 USDC)
     from: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
     let cfg = get_market_config(chain_id, market)?;
+    let amount = rpc::parse_human_amount(amount_str, cfg.base_asset_decimals)?;
 
     // Resolve wallet address — must not default to zero address
     let wallet = from

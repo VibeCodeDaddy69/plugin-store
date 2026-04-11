@@ -170,7 +170,52 @@ pub async fn get_reward_owed(
     Ok(u128::from_str_radix(owed_hex, 16).unwrap_or(0))
 }
 
+/// ERC-20 decimals() → u8
+pub async fn get_erc20_decimals(token: &str, rpc_url: &str) -> anyhow::Result<u8> {
+    // decimals() selector: 0x313ce567
+    let result = eth_call(token, "0x313ce567", rpc_url).await?;
+    let clean = result.trim_start_matches("0x");
+    if clean.len() < 2 {
+        return Ok(18); // safe default
+    }
+    let val = u8::from_str_radix(&clean[clean.len() - 2..], 16).unwrap_or(18);
+    Ok(val)
+}
+
 /// Convert per-second rate (1e18 scaled) to APR percentage
 pub fn rate_to_apr_pct(rate_per_sec: u128) -> f64 {
     (rate_per_sec as f64 / 1e18) * 31_536_000.0 * 100.0
+}
+
+/// Parse a human-readable decimal amount string into raw token units.
+/// "0.1" with decimals=6 → 100_000
+/// "1.5" with decimals=18 → 1_500_000_000_000_000_000
+/// Avoids floating-point precision loss by working on the string directly.
+pub fn parse_human_amount(amount_str: &str, decimals: u8) -> anyhow::Result<u128> {
+    let s = amount_str.trim();
+    let factor = 10u128.pow(decimals as u32);
+    if let Some(dot_pos) = s.find('.') {
+        let int_part: u128 = if dot_pos == 0 {
+            0
+        } else {
+            s[..dot_pos].parse().map_err(|_| anyhow::anyhow!("Invalid amount: '{}'", s))?
+        };
+        let frac_str = &s[dot_pos + 1..];
+        if frac_str.len() > decimals as usize {
+            anyhow::bail!(
+                "Amount '{}' has {} decimal places but token only supports {}",
+                s, frac_str.len(), decimals
+            );
+        }
+        let frac: u128 = if frac_str.is_empty() {
+            0
+        } else {
+            frac_str.parse().map_err(|_| anyhow::anyhow!("Invalid amount: '{}'", s))?
+        };
+        let frac_factor = 10u128.pow(decimals as u32 - frac_str.len() as u32);
+        Ok(int_part * factor + frac * frac_factor)
+    } else {
+        let int_val: u128 = s.parse().map_err(|_| anyhow::anyhow!("Invalid amount: '{}'", s))?;
+        Ok(int_val * factor)
+    }
 }

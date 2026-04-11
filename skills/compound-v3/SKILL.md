@@ -1,7 +1,7 @@
 ---
 name: compound-v3
 description: "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards. Trigger phrases: compound supply, compound borrow, compound repay, compound withdraw, compound rewards, compound position, compound market."
-version: "0.2.0"
+version: "0.2.1"
 author: "skylavis-sky"
 tags:
   - lending
@@ -32,7 +32,9 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install compound-v3 binary (auto-injected)
 
 ```bash
-if ! command -v compound-v3 >/dev/null 2>&1; then
+REQUIRED_VERSION="0.2.1"
+INSTALLED_VERSION=$(compound-v3 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
@@ -46,9 +48,26 @@ if ! command -v compound-v3 >/dev/null 2>&1; then
     mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
     mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
+    *) echo "Unsupported platform: ${OS}_${ARCH}"; exit 1 ;;
   esac
+  BASE_URL="https://github.com/okx/plugin-store/releases/download/plugins/compound-v3@${REQUIRED_VERSION}"
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/compound-v3@0.2.0/compound-v3-${TARGET}${EXT}" -o ~/.local/bin/compound-v3${EXT}
+  curl -fsSL "${BASE_URL}/checksums.txt" -o /tmp/compound-v3-checksums.txt
+  curl -fsSL "${BASE_URL}/compound-v3-${TARGET}${EXT}" -o ~/.local/bin/compound-v3${EXT}
+  EXPECTED=$(grep "compound-v3-${TARGET}${EXT}" /tmp/compound-v3-checksums.txt | awk '{print $1}')
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum ~/.local/bin/compound-v3${EXT} | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL=$(shasum -a 256 ~/.local/bin/compound-v3${EXT} | awk '{print $1}')
+  else
+    echo "Warning: cannot verify checksum" && ACTUAL="$EXPECTED"
+  fi
+  if [ "$ACTUAL" != "$EXPECTED" ]; then
+    echo "Checksum mismatch for compound-v3-${TARGET}${EXT} — aborting install"
+    rm -f ~/.local/bin/compound-v3${EXT} /tmp/compound-v3-checksums.txt
+    exit 1
+  fi
+  rm -f /tmp/compound-v3-checksums.txt
   chmod +x ~/.local/bin/compound-v3${EXT}
 fi
 ```
@@ -70,7 +89,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"compound-v3","version":"0.2.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"compound-v3","version":"0.2.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -151,12 +170,12 @@ Supplying base asset (e.g. USDC) when debt exists will automatically repay debt 
 # Preview (dry-run)
 compound-v3 --chain 8453 --market usdc --dry-run supply \
   --asset 0x4200000000000000000000000000000000000006 \
-  --amount 100000000000000000
+  --amount 0.1
 
 # Execute
 compound-v3 --chain 8453 --market usdc supply \
   --asset 0x4200000000000000000000000000000000000006 \
-  --amount 100000000000000000 \
+  --amount 0.1 \
   --from 0xYourWallet
 ```
 
@@ -176,10 +195,10 @@ Borrow is implemented as `Comet.withdraw(base_asset, amount)`. No ERC-20 approve
 
 ```bash
 # Preview (dry-run)
-compound-v3 --chain 8453 --market usdc --dry-run borrow --amount 100000000
+compound-v3 --chain 8453 --market usdc --dry-run borrow --amount 100.0
 
 # Execute
-compound-v3 --chain 8453 --market usdc borrow --amount 100000000 --from 0xYourWallet
+compound-v3 --chain 8453 --market usdc borrow --amount 100.0 --from 0xYourWallet
 ```
 
 **Execution flow:**
@@ -203,7 +222,7 @@ compound-v3 --chain 8453 --market usdc --dry-run repay
 compound-v3 --chain 8453 --market usdc repay --from 0xYourWallet
 
 # Execute partial repay
-compound-v3 --chain 8453 --market usdc repay --amount 50000000 --from 0xYourWallet
+compound-v3 --chain 8453 --market usdc repay --amount 50.0 --from 0xYourWallet
 ```
 
 **Execution flow:**
@@ -225,12 +244,12 @@ Withdraw requires zero outstanding debt. The plugin enforces this with a pre-che
 # Preview (dry-run)
 compound-v3 --chain 8453 --market usdc --dry-run withdraw \
   --asset 0x4200000000000000000000000000000000000006 \
-  --amount 100000000000000000
+  --amount 0.1
 
 # Execute
 compound-v3 --chain 8453 --market usdc withdraw \
   --asset 0x4200000000000000000000000000000000000006 \
-  --amount 100000000000000000 \
+  --amount 0.1 \
   --from 0xYourWallet
 ```
 

@@ -68,6 +68,54 @@ pub fn extract_tx_hash(result: &Value) -> &str {
         .unwrap_or("pending")
 }
 
+/// Poll eth_getTransactionReceipt until the tx is mined (up to ~60s), then
+/// return Err if the receipt shows status 0x0 (reverted). This prevents
+/// false-success reporting when a broadcast tx reverts on-chain.
+pub async fn wait_and_check_receipt(tx_hash: &str, rpc_url: &str) -> anyhow::Result<()> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_getTransactionReceipt",
+        "params": [tx_hash],
+        "id": 1
+    });
+
+    for attempt in 0..12u32 {
+        if attempt > 0 {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+        let resp: Value = match client.post(rpc_url).json(&body).send().await {
+            Ok(r) => match r.json().await {
+                Ok(v) => v,
+                Err(_) => continue,
+            },
+            Err(_) => continue,
+        };
+
+        let result = &resp["result"];
+        if result.is_null() {
+            continue; // not mined yet
+        }
+
+        let status = result["status"].as_str().unwrap_or("0x0");
+        if status == "0x0" || status == "0" {
+            anyhow::bail!(
+                "Transaction {} reverted on-chain (status=0x0). \
+                 Check slippage tolerance or amounts and retry.",
+                tx_hash
+            );
+        }
+        return Ok(());
+    }
+
+    // Timed out — warn but don't hard-fail
+    eprintln!(
+        "  [warn] Could not confirm receipt for {} within 60s — verify on-chain before assuming success.",
+        tx_hash
+    );
+    Ok(())
+}
+
 /// ERC-20 approve — no onchainos dex approve command; manually encode calldata.
 /// approve(address,uint256) selector = 0x095ea7b3
 pub async fn erc20_approve(

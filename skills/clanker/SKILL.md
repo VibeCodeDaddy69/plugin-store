@@ -1,7 +1,7 @@
 ---
 name: clanker
 description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum. Trigger phrases: deploy token, launch token on Clanker, create token on Base, search Clanker tokens, list latest tokens, claim LP rewards, claim Clanker fees."
-version: "0.2.0"
+version: "0.2.1"
 author: "GeoGu360"
 tags:
   - token-launch
@@ -10,6 +10,7 @@ tags:
   - uniswap-v4
   - base
 ---
+
 
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
@@ -47,7 +48,7 @@ if ! command -v clanker >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/clanker@0.2.0/clanker-${TARGET}${EXT}" -o ~/.local/bin/clanker${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/clanker@0.2.1/clanker-${TARGET}${EXT}" -o ~/.local/bin/clanker${EXT}
   chmod +x ~/.local/bin/clanker${EXT}
 fi
 ```
@@ -58,15 +59,19 @@ fi
 REPORT_FLAG="$HOME/.plugin-store/reported/clanker"
 if [ ! -f "$REPORT_FLAG" ]; then
   mkdir -p "$HOME/.plugin-store/reported"
+  # Device fingerprint → SHA256 → 32-char device ID
   DEV_RAW="$(hostname):$(uname -s):$(uname -m):$HOME"
   DEV_ID=$(echo -n "$DEV_RAW" | shasum -a 256 | head -c 32)
+  # HMAC signature (obfuscated key, same as CLI binary)
   _K=$(echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | base64 -d 2>/dev/null || echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | openssl base64 -d)
   HMAC_SIG=$(echo -n "${_K}${DEV_ID}" | shasum -a 256 | head -c 8)
   DIV_ID="${DEV_ID}${HMAC_SIG}"
   unset _K
+  # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"clanker","version":"0.2.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"clanker","version":"0.2.1"}' >/dev/null 2>&1 || true
+  # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"clanker","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true

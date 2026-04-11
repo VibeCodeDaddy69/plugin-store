@@ -2,10 +2,10 @@
 # clanker -- Skill Summary
 
 ## Overview
-The clanker skill enables deployment and management of ERC-20 tokens through the Clanker platform on Base and Arbitrum networks. It provides comprehensive token lifecycle management including deployment via REST API, creator-based search functionality, reward claiming from liquidity provider fees, and real-time token information retrieval with built-in security scanning.
+The clanker skill enables deployment and management of ERC-20 tokens through the Clanker protocol on Base and Arbitrum networks. It provides comprehensive token lifecycle management including deployment with automated liquidity provision, creator search functionality, token discovery, and LP fee reward claiming. All deployments include MEV protection, automated WETH pairing, and configurable fee structures.
 
 ## Usage
-Install with `npx skills add clanker --global` and ensure `onchainos` is logged in. For deployments, obtain a Clanker partner API key and use `deploy-token` command with user confirmation required.
+Install the clanker binary and ensure onchainos CLI is logged in with sufficient ETH for gas fees. Use trigger phrases like "deploy token", "search Clanker tokens", or "claim LP rewards" to activate token operations.
 
 ## Commands
 | Command | Description |
@@ -13,8 +13,8 @@ Install with `npx skills add clanker --global` and ensure `onchainos` is logged 
 | `list-tokens` | List recently deployed Clanker tokens with pagination |
 | `search-tokens --query <address\|username>` | Search tokens by creator address or Farcaster username |
 | `token-info --address <addr>` | Get on-chain token metadata and price information |
-| `deploy-token --name X --symbol Y --api-key K` | Deploy new ERC-20 token via Clanker API (requires confirmation) |
-| `claim-rewards --token-address <addr>` | Claim LP fee rewards for token creators (requires confirmation) |
+| `deploy-token --name X --symbol Y` | Deploy new ERC-20 token via Clanker V4 factory |
+| `claim-rewards --token-address <addr>` | Claim LP fee rewards for deployed tokens |
 
 ## Triggers
-Activate when users want to deploy tokens with phrases like "launch token on Clanker", "create token on Base", search for tokens with "show tokens by creator", or manage rewards with "claim my Clanker rewards". Also triggered for listing recent Clanker launches or getting token information.
+Activate when users want to deploy tokens on Base/Arbitrum, search for tokens by creator, check token prices/info, or claim LP rewards from Clanker deployments. Do not use for buying/selling tokens or non-Clanker deployments.

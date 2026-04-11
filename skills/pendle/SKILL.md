@@ -24,9 +24,9 @@ metadata:
 
 All `onchainos wallet contract-call` invocations in this plugin — both ERC-20 approvals and main transactions — include `--force`. This is required to broadcast transactions to the chain; without it, onchainos returns a preview/confirmation response without submitting. The user-confirmation step is handled by the agent's **dry-run → confirm → execute** flow in SKILL.md: the agent must always run `--dry-run` first and obtain explicit user approval before calling any write command without `--dry-run`.
 
-## ⚠️ Unlimited Approval Notice
+## ERC-20 Approval Amounts
 
-ERC-20 approvals issued by this plugin use **unlimited allowance** (`uint256.MAX`). This is a one-time approval that persists across sessions. Once approved, the Pendle Router (`0x888888888889758F76e7103c6CbF23ABbF58F946`) may spend any amount of the approved token on behalf of the wallet. Users should be made aware that approvals are unlimited before proceeding with any write operation that triggers an approval.
+ERC-20 approvals issued by this plugin use the **exact transaction amount** (`amount_in` for single-token ops, per-token amounts for `redeem-py`). The Pendle Router (`0x888888888889758F76e7103c6CbF23ABbF58F946`) is approved only for the amount being transacted. If a subsequent transaction requires a larger amount, a new approval will be submitted.
 
 ## Supported Chains
 

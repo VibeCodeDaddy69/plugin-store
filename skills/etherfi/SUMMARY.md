@@ -1,13 +1,13 @@
 # etherfi
-Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY.
+Liquid restaking protocol on Ethereum that allows users to deposit ETH for eETH and wrap it into yield-bearing weETH tokens.
 
 ## Highlights
-- Deposit ETH into ether.fi LiquidityPool to receive liquid staking token (eETH)
-- Wrap eETH into weETH (ERC-4626 yield-bearing token) for auto-compounding rewards
-- Earn combined Ethereum staking + EigenLayer restaking rewards
-- Check balances and current protocol APY with read-only position queries
-- Two-step confirmation gate for all write operations (preview then broadcast)
-- Direct integration with onchainos wallet for secure transaction signing
-- Support for stake, wrap, unwrap, and position monitoring workflows
-- Built-in allowance management and balance validation
+- Liquid staking with eETH tokens that maintain liquidity while earning rewards
+- ERC-4626 weETH wrapper that auto-compounds staking and EigenLayer restaking rewards
+- Two-step withdrawal process with NFT-based claim system for ETH redemption
+- Real-time APY tracking from both Ethereum staking and EigenLayer restaking
+- Seamless wrapping/unwrapping between eETH and weETH tokens
+- Portfolio monitoring with detailed balance and yield information
+- Secure transaction flow with preview-then-confirm pattern for all operations
+- Integration with onchainos CLI for trusted wallet operations
 

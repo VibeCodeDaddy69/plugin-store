@@ -2,18 +2,18 @@
 # etherfi -- Skill Summary
 
 ## Overview
-The ether.fi plugin enables liquid restaking on Ethereum through a comprehensive workflow: deposit ETH to receive eETH liquid staking tokens, wrap eETH into weETH (ERC-4626 yield-bearing tokens) to earn auto-compounded staking and EigenLayer restaking rewards, and monitor positions with real-time APY data. All write operations use onchainos wallet integration with mandatory confirmation gates for secure transaction execution.
+The etherfi skill enables liquid restaking on Ethereum through the ether.fi protocol. Users can deposit ETH to receive eETH (liquid staking tokens), wrap eETH into weETH (ERC-4626 yield-bearing tokens) that auto-compound rewards from both Ethereum staking and EigenLayer restaking, and manage their positions including withdrawals through a two-step process. The skill provides real-time APY tracking and portfolio monitoring capabilities.
 
 ## Usage
-Run commands without `--confirm` to preview transactions, then add `--confirm` to broadcast. Use `etherfi positions` to check balances and APY anytime.
+Run `etherfi positions` to view current balances and APY. All write operations require `--confirm` flag after previewing the transaction details first.
 
 ## Commands
-| Command | Description |
-|---------|-------------|
-| `etherfi positions [--owner ADDRESS]` | View eETH/weETH balances and protocol APY (read-only) |
-| `etherfi stake --amount ETH [--confirm]` | Deposit ETH to receive eETH |
-| `etherfi wrap --amount EETH [--confirm]` | Wrap eETH into yield-bearing weETH |
-| `etherfi unwrap --amount WEETH [--confirm]` | Redeem weETH back to eETH |
+- `positions` - View eETH/weETH balances and protocol APY (read-only)
+- `stake --amount <ETH>` - Deposit ETH to receive eETH tokens
+- `wrap --amount <eETH>` - Convert eETH to yield-bearing weETH
+- `unwrap --amount <weETH>` - Convert weETH back to eETH
+- `unstake --amount <eETH>` - Request ETH withdrawal (step 1)
+- `unstake --claim --token-id <id>` - Claim finalized ETH withdrawal (step 2)
 
 ## Triggers
-Activate when users want to stake ETH on ether.fi, wrap/unwrap between eETH and weETH, check ether.fi positions or APY, or engage with liquid restaking protocols. Also trigger for phrases like "get weETH", "ether.fi liquid restaking", or similar DeFi staking requests.
+Activate when users want to stake ETH on ether.fi, manage eETH/weETH positions, check liquid restaking yields, or perform withdrawals from the ether.fi protocol. Also triggered by requests for EigenLayer restaking or liquid staking alternatives.

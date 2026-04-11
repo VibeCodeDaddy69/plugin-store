@@ -16,6 +16,14 @@ pub async fn run(
     dry_run: bool,
     confirm: bool,
 ) -> Result<()> {
+    // Require explicit --confirm for live claims
+    if !dry_run && !confirm {
+        bail!(
+            "Claiming rewards requires explicit confirmation. Run with --dry-run first to preview, \
+             then re-run with --confirm to execute."
+        );
+    }
+
     // ── 1. Resolve wallet address ─────────────────────────────────────────
     let wallet = from
         .map(|s| s.to_string())

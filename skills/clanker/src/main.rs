@@ -86,6 +86,10 @@ enum Commands {
         /// Token image URL (IPFS or HTTPS)
         #[arg(long)]
         image_url: Option<String>,
+
+        /// Confirm and execute the deployment (required after reviewing --dry-run output)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Claim LP fee rewards for a Clanker token you created
@@ -97,6 +101,10 @@ enum Commands {
         /// Wallet address to receive rewards (defaults to logged-in onchainos wallet)
         #[arg(long)]
         from: Option<String>,
+
+        /// Confirm and execute the claim (required after reviewing --dry-run output)
+        #[arg(long)]
+        confirm: bool,
     },
 }
 
@@ -106,14 +114,7 @@ async fn main() {
 
     let result = match cli.command {
         Commands::ListTokens { page, limit, sort } => {
-            let chain_filter = if cli.chain != 8453 {
-                Some(cli.chain)
-            } else {
-                // Default: pass chain filter only if explicitly set to non-default
-                // Allow listing all chains by default, or filter by --chain
-                Some(cli.chain)
-            };
-            commands::list_tokens::run(page, limit, &sort, chain_filter).await
+            commands::list_tokens::run(page, limit, &sort, Some(cli.chain)).await
         }
 
         Commands::SearchTokens {
@@ -125,7 +126,6 @@ async fn main() {
         } => commands::search_tokens::run(&query, limit, offset, &sort, trusted_only).await,
 
         Commands::TokenInfo { address } => {
-            // token-info is a sync operation; run synchronously
             commands::token_info::run(cli.chain, &address)
                 .map_err(|e| anyhow::anyhow!(e))
         }
@@ -135,6 +135,7 @@ async fn main() {
             symbol,
             from,
             image_url,
+            confirm,
         } => {
             commands::deploy_token::run(
                 cli.chain,
@@ -143,6 +144,7 @@ async fn main() {
                 from.as_deref(),
                 image_url.as_deref(),
                 cli.dry_run,
+                confirm,
             )
             .await
         }
@@ -150,13 +152,14 @@ async fn main() {
         Commands::ClaimRewards {
             token_address,
             from,
+            confirm,
         } => {
             commands::claim_rewards::run(
                 cli.chain,
                 &token_address,
                 from.as_deref(),
                 cli.dry_run,
-                !cli.dry_run, // confirm=true only when not a dry-run
+                confirm,
             )
             .await
         }

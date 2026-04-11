@@ -2,12 +2,25 @@
 use std::process::Command;
 use serde_json::Value;
 
+/// Run an onchainos sub-command, check exit code, parse stdout as JSON.
+fn run_onchainos(args: &[&str]) -> anyhow::Result<Value> {
+    let output = Command::new("onchainos").args(args).output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(anyhow::anyhow!(
+            "onchainos {} failed (exit {}): {}",
+            args.first().unwrap_or(&""),
+            output.status.code().unwrap_or(-1),
+            if stderr.trim().is_empty() { stdout } else { stderr }
+        ));
+    }
+    Ok(serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?)
+}
+
 /// Resolve the current logged-in wallet EVM address via `wallet addresses`.
 pub fn resolve_wallet(_chain_id: u64) -> anyhow::Result<String> {
-    let output = Command::new("onchainos")
-        .args(["wallet", "addresses"])
-        .output()?;
-    let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
+    let json = run_onchainos(&["wallet", "addresses"])?;
     Ok(json["data"]["evmAddress"].as_str().unwrap_or("").to_string())
 }
 
@@ -64,6 +77,15 @@ pub async fn wallet_contract_call(
     }
 
     let output = Command::new("onchainos").args(&args).output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(anyhow::anyhow!(
+            "onchainos wallet contract-call failed (exit {}): {}",
+            output.status.code().unwrap_or(-1),
+            if stderr.trim().is_empty() { stdout } else { stderr }
+        ));
+    }
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(serde_json::from_str(&stdout)?)
 }
@@ -87,68 +109,29 @@ pub fn extract_tx_hash_or_err(result: &Value) -> anyhow::Result<String> {
 /// Uses `--tokens <chainId>:<address>` format as required by the onchainos CLI.
 pub fn security_token_scan(chain_id: u64, token_addr: &str) -> anyhow::Result<Value> {
     let tokens_arg = format!("{}:{}", chain_id, token_addr);
-    let output = Command::new("onchainos")
-        .args([
-            "security",
-            "token-scan",
-            "--tokens",
-            &tokens_arg,
-        ])
-        .output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    run_onchainos(&["security", "token-scan", "--tokens", &tokens_arg])
 }
 
 /// Run `onchainos token info` for a contract address.
 pub fn token_info(chain_id: u64, token_addr: &str) -> anyhow::Result<Value> {
     let chain_str = chain_id.to_string();
-    let output = Command::new("onchainos")
-        .args([
-            "token",
-            "info",
-            "--address",
-            token_addr,
-            "--chain",
-            &chain_str,
-        ])
-        .output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    run_onchainos(&["token", "info", "--address", token_addr, "--chain", &chain_str])
 }
 
 /// Run `onchainos token price-info` for a contract address.
 pub fn token_price_info(chain_id: u64, token_addr: &str) -> anyhow::Result<Value> {
     let chain_str = chain_id.to_string();
-    let output = Command::new("onchainos")
-        .args([
-            "token",
-            "price-info",
-            "--address",
-            token_addr,
-            "--chain",
-            &chain_str,
-        ])
-        .output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    run_onchainos(&["token", "price-info", "--address", token_addr, "--chain", &chain_str])
 }
 
 /// Run `onchainos wallet status` and return JSON.
 pub fn wallet_status() -> anyhow::Result<Value> {
-    let output = Command::new("onchainos")
-        .args(["wallet", "status"])
-        .output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    run_onchainos(&["wallet", "status"])
 }
 
 /// Run `onchainos wallet addresses` and return the first EVM address.
 pub fn wallet_addresses() -> anyhow::Result<String> {
-    let output = Command::new("onchainos")
-        .args(["wallet", "addresses"])
-        .output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let json: Value = serde_json::from_str(&stdout)?;
+    let json = run_onchainos(&["wallet", "addresses"])?;
     Ok(json["data"]["evm"]
         .get(0)
         .and_then(|v| v["address"].as_str())

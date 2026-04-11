@@ -4,7 +4,10 @@ use serde_json::{json, Value};
 
 /// Perform a raw `eth_call` against an RPC endpoint.
 pub async fn eth_call(rpc_url: &str, to: &str, data: &str) -> anyhow::Result<String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .context("failed to build HTTP client")?;
     let body = json!({
         "jsonrpc": "2.0",
         "method": "eth_call",

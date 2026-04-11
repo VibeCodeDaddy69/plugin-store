@@ -23,54 +23,38 @@ const MEV_MODULE_V2_BASE: &str   = "0xebB25BB797D82CB78E1bc70406b13233c0854413";
 
 // ── Pool parameters ────────────────────────────────────────────────────────
 
-// tick when token address < WETH address (token0 = clanker token)
-// -230400 ≈ 10 ETH initial market cap
 const TICK_IF_TOKEN0_IS_CLANKER: i32 = -230400;
 const TICK_SPACING: i32              = 200;
-
-// LP position range: one-sided (token-only), starting just below initial tick
-const TICK_LOWER: i32 = -230400;
-const TICK_UPPER: i32 = -120000;
-
-// Fee in uniBps (bps × 100). 100 bps = 1% fee → 10000 uniBps.
-const FEE_UNI_BPS: u32 = 10_000;
-
-// MEV module defaults (gradual fee decay over ~15 seconds after each block)
-const MEV_STARTING_FEE: u32 = 666_777;
-const MEV_ENDING_FEE: u32   = 41_673;
-const MEV_DECAY_SECS: u64   = 15;
+const TICK_LOWER: i32                = -230400;
+const TICK_UPPER: i32                = -120000;
+const FEE_UNI_BPS: u32              = 10_000;
+const MEV_STARTING_FEE: u32         = 666_777;
+const MEV_ENDING_FEE: u32           = 41_673;
+const MEV_DECAY_SECS: u64           = 15;
 
 // ── ABI types ──────────────────────────────────────────────────────────────
 
 sol! {
-    // ── Inner encoding structs (bytes fields) ──────────────────────────────
-
-    /// Encodes into PoolConfig.poolData for feeStaticHookV2
     struct PoolInitializationData {
         address extension;
         bytes   extensionData;
         bytes   feeData;
     }
 
-    /// Fee parameters encoded into PoolInitializationData.feeData
     struct FeeConfig {
         uint24 clankerFee;
         uint24 pairedFee;
     }
 
-    /// Encodes into LockerConfig.lockerData
     struct LockerInstantiationData {
         uint8[] feePreference;
     }
 
-    /// Encodes into MevModuleConfig.mevModuleData
     struct MevSniperAuctionInitData {
         uint24  startingFee;
         uint24  endingFee;
         uint256 secondsToDecay;
     }
-
-    // ── Factory ABI structs ────────────────────────────────────────────────
 
     struct TokenConfig {
         address tokenAdmin;
@@ -126,16 +110,13 @@ sol! {
         external payable returns (address tokenAddress);
 }
 
-// ── Type aliases ───────────────────────────────────────────────────────────
 type I24 = alloy_primitives::aliases::I24;
 type U24 = alloy_primitives::aliases::U24;
 
-/// Helper: convert an i32 into an alloy I24 (int24), bailing on overflow.
 fn i24(v: i32) -> Result<I24> {
     I24::try_from(v as i64).map_err(|_| anyhow::anyhow!("int24 overflow: {}", v))
 }
 
-/// Helper: convert a u32 into an alloy U24 (uint24), bailing on overflow.
 fn u24(v: u32) -> Result<U24> {
     U24::try_from(v as u64).map_err(|_| anyhow::anyhow!("uint24 overflow: {}", v))
 }
@@ -148,8 +129,16 @@ pub async fn run(
     from: Option<&str>,
     image_url: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> Result<()> {
-    // Only Base supported for direct on-chain deployment
+    // Require explicit --confirm for live deployments
+    if !dry_run && !confirm {
+        bail!(
+            "Deployment requires explicit confirmation. Run with --dry-run first to preview, \
+             then re-run with --confirm to execute."
+        );
+    }
+
     if chain_id != 8453 {
         bail!(
             "Direct on-chain deployment is only supported on Base (chain 8453). \
@@ -172,12 +161,12 @@ pub async fn run(
         .parse()
         .map_err(|_| anyhow::anyhow!("Invalid wallet address: {}", wallet_str))?;
 
-    let hook_addr: Address    = HOOK_STATIC_V2_BASE.parse().unwrap();
-    let weth_addr: Address    = WETH_BASE.parse().unwrap();
-    let locker_addr: Address  = LOCKER_BASE.parse().unwrap();
-    let mev_addr: Address     = MEV_MODULE_V2_BASE.parse().unwrap();
+    let hook_addr: Address   = HOOK_STATIC_V2_BASE.parse().unwrap();
+    let weth_addr: Address   = WETH_BASE.parse().unwrap();
+    let locker_addr: Address = LOCKER_BASE.parse().unwrap();
+    let mev_addr: Address    = MEV_MODULE_V2_BASE.parse().unwrap();
 
-    // ── 2. Derive unique salt from a UUID (prevents address collisions) ───
+    // ── 2. Unique salt per deployment ─────────────────────────────────────
     let uuid = Uuid::new_v4();
     let mut salt_bytes = [0u8; 32];
     salt_bytes[..16].copy_from_slice(uuid.as_bytes());
@@ -185,14 +174,12 @@ pub async fn run(
 
     // ── 3. Encode inner bytes fields ──────────────────────────────────────
 
-    // feeData = abi.encode(uint24(10000), uint24(10000))
     let fee_data = FeeConfig {
         clankerFee: u24(FEE_UNI_BPS)?,
         pairedFee:  u24(FEE_UNI_BPS)?,
     }
     .abi_encode();
 
-    // poolData = abi.encode(PoolInitializationData{zeroAddr, 0x, feeData})
     let pool_data = PoolInitializationData {
         extension:     Address::ZERO,
         extensionData: Bytes::new(),
@@ -200,14 +187,11 @@ pub async fn run(
     }
     .abi_encode();
 
-    // lockerData = abi.encode(LockerInstantiationData{feePreference:[0]})
-    // feePreference 0 = Both (take fees in both WETH and token)
     let locker_data = LockerInstantiationData {
         feePreference: vec![0u8],
     }
     .abi_encode();
 
-    // mevModuleData = abi.encode(MevSniperAuctionInitData{...})
     let mev_data = MevSniperAuctionInitData {
         startingFee:    u24(MEV_STARTING_FEE)?,
         endingFee:      u24(MEV_ENDING_FEE)?,
@@ -219,14 +203,14 @@ pub async fn run(
 
     let deployment_config = DeploymentConfig {
         tokenConfig: TokenConfig {
-            tokenAdmin:          wallet_addr,
-            name:                name.to_string(),
-            symbol:              symbol.to_string(),
+            tokenAdmin:         wallet_addr,
+            name:               name.to_string(),
+            symbol:             symbol.to_string(),
             salt,
-            image:               image_url.unwrap_or("").to_string(),
-            metadata:            String::new(),
-            context:             String::new(),
-            originatingChainId:  U256::from(chain_id),
+            image:              image_url.unwrap_or("").to_string(),
+            metadata:           String::new(),
+            context:            String::new(),
+            originatingChainId: U256::from(chain_id),
         },
         poolConfig: PoolConfig {
             hook:                  hook_addr,
@@ -246,7 +230,7 @@ pub async fn run(
             lockerData:       Bytes::from(locker_data),
         },
         mevModuleConfig: MevModuleConfig {
-            mevModule:    mev_addr,
+            mevModule:     mev_addr,
             mevModuleData: Bytes::from(mev_data),
         },
         extensionConfigs: vec![],
@@ -278,7 +262,7 @@ pub async fn run(
                 "lp_range": { "tick_lower": TICK_LOWER, "tick_upper": TICK_UPPER },
                 "factory": factory,
                 "calldata_selector": &calldata[..10],
-                "note": "Run without --dry-run after user confirmation to execute on-chain"
+                "note": "Re-run with --confirm to execute on-chain"
             }
         });
         println!("{}", serde_json::to_string_pretty(&preview)?);
@@ -286,14 +270,13 @@ pub async fn run(
     }
 
     // ── 7. Execute on-chain ───────────────────────────────────────────────
-    // The agent MUST ask user to confirm before calling this command without --dry-run.
     let result = onchainos::wallet_contract_call(
         chain_id,
         factory,
         &calldata,
         Some(&wallet_str),
-        None,   // msg.value = 0 (no devBuy extension)
-        true,   // --force: prevents "pending" txHash
+        None,
+        confirm, // --force only when user has confirmed
         false,
     )
     .await?;

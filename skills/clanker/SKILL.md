@@ -272,14 +272,15 @@ clanker deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
 **Execution flow:**
 1. Run with `--dry-run` to preview the `collectFees` calldata
 2. **Ask user to confirm** — show fee locker address, token address, and wallet that will receive rewards
-3. Execute only after explicit user approval: calls `onchainos wallet contract-call` on the ClankerFeeLocker contract
+3. Execute: re-run with `--confirm` to call `onchainos wallet contract-call` on the ClankerFeeLocker contract
 4. Report transaction hash
 
 **Usage:**
 ```
 clanker [--chain 8453] [--dry-run] claim-rewards \
   --token-address <TOKEN_ADDRESS> \
-  [--from <wallet-address>]
+  [--from <wallet-address>] \\
+  [--confirm]
 ```
 
 **Parameters:**
@@ -289,6 +290,7 @@ clanker [--chain 8453] [--dry-run] claim-rewards \
 | `--token-address` | required | Clanker token contract address |
 | `--from` | wallet login | Wallet address to claim rewards for |
 | `--dry-run` | false | Preview calldata without executing |
+| `--confirm` | false | Required to execute — must be passed after reviewing `--dry-run` output |
 
 **Example:**
 ```bash
@@ -296,7 +298,7 @@ clanker [--chain 8453] [--dry-run] claim-rewards \
 clanker --dry-run claim-rewards --token-address 0xTokenAddress
 
 # Claim (after user confirmation)
-clanker claim-rewards --token-address 0xTokenAddress --from 0xYourWallet
+clanker claim-rewards --token-address 0xTokenAddress --from 0xYourWallet --confirm
 ```
 
 **Expected output:**

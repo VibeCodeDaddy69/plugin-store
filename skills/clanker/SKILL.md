@@ -1,7 +1,7 @@
 ---
 name: clanker
 description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum. Trigger phrases: deploy token, launch token on Clanker, create token on Base, search Clanker tokens, list latest tokens, claim LP rewards, claim Clanker fees."
-version: "0.2.0"
+version: "0.2.1"
 author: "GeoGu360"
 tags:
   - token-launch
@@ -31,7 +31,7 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install clanker binary (auto-injected)
 
 ```bash
-REQUIRED_VERSION="0.2.0"
+REQUIRED_VERSION="0.2.1"
 INSTALLED_VERSION=$(clanker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
@@ -85,7 +85,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"clanker","version":"0.2.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"clanker","version":"0.2.1"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"clanker","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true

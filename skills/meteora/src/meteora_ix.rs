@@ -69,6 +69,27 @@ pub fn get_ata(wallet: &Pubkey, mint: &Pubkey) -> Pubkey {
     .0
 }
 
+/// Build `create_idempotent` ATA instruction (no-op if ATA already exists).
+pub fn ix_create_ata_idempotent(
+    payer: &Pubkey,
+    ata: &Pubkey,
+    wallet: &Pubkey,
+    mint: &Pubkey,
+) -> Instruction {
+    Instruction {
+        program_id: ATA_PROGRAM,
+        accounts: vec![
+            AccountMeta::new(*payer, true),          // payer (writable signer)
+            AccountMeta::new(*ata, false),            // ATA (writable)
+            AccountMeta::new_readonly(*wallet, false),// wallet
+            AccountMeta::new_readonly(*mint, false),  // mint
+            AccountMeta::new_readonly(SYSTEM_PROGRAM, false),
+            AccountMeta::new_readonly(TOKEN_PROGRAM, false),
+        ],
+        data: vec![1u8], // instruction variant 1 = CreateIdempotent
+    }
+}
+
 // ── Instruction builders ─────────────────────────────────────────────────────
 
 /// Build `initialize_bin_array` instruction.
@@ -220,6 +241,107 @@ pub fn ix_add_liquidity_by_strategy(
             AccountMeta::new_readonly(ev_auth, false),
             AccountMeta::new_readonly(DLMM_PROGRAM, false), // program self-ref
         ],
+        data,
+    }
+}
+
+/// Build `remove_liquidity_by_range` instruction.
+/// `bps_to_remove`: 10000 = 100% (remove all liquidity).
+#[allow(clippy::too_many_arguments)]
+pub fn ix_remove_liquidity_by_range(
+    position: &Pubkey,
+    lb_pair: &Pubkey,
+    user_token_x: &Pubkey,
+    user_token_y: &Pubkey,
+    reserve_x: &Pubkey,
+    reserve_y: &Pubkey,
+    token_x_mint: &Pubkey,
+    token_y_mint: &Pubkey,
+    bin_array_lower: &Pubkey,
+    bin_array_upper: &Pubkey,
+    sender: &Pubkey,
+    from_bin_id: i32,
+    to_bin_id: i32,
+    bps_to_remove: u16,
+) -> Instruction {
+    // sha256("global:remove_liquidity_by_range")[:8]
+    let discriminator: [u8; 8] = [26, 82, 102, 152, 240, 74, 105, 26];
+    let mut data = discriminator.to_vec();
+    data.extend_from_slice(&from_bin_id.to_le_bytes());
+    data.extend_from_slice(&to_bin_id.to_le_bytes());
+    data.extend_from_slice(&bps_to_remove.to_le_bytes());
+
+    let ev_auth = event_authority();
+
+    Instruction {
+        program_id: DLMM_PROGRAM,
+        accounts: vec![
+            AccountMeta::new(*position, false),
+            AccountMeta::new(*lb_pair, false),
+            AccountMeta::new(DLMM_PROGRAM, false), // bin_array_bitmap_extension (optional sentinel)
+            AccountMeta::new(*user_token_x, false),
+            AccountMeta::new(*user_token_y, false),
+            AccountMeta::new(*reserve_x, false),
+            AccountMeta::new(*reserve_y, false),
+            AccountMeta::new_readonly(*token_x_mint, false),
+            AccountMeta::new_readonly(*token_y_mint, false),
+            AccountMeta::new(*bin_array_lower, false),
+            AccountMeta::new(*bin_array_upper, false),
+            AccountMeta::new_readonly(*sender, true),
+            AccountMeta::new_readonly(TOKEN_PROGRAM, false), // token_x_program
+            AccountMeta::new_readonly(TOKEN_PROGRAM, false), // token_y_program
+            AccountMeta::new_readonly(ev_auth, false),
+            AccountMeta::new_readonly(DLMM_PROGRAM, false), // program self-ref
+        ],
+        data,
+    }
+}
+
+/// Build `close_position` instruction.
+/// Must be called after removing ALL liquidity (bps=10000).
+/// Closes the position account and returns rent (~0.057 SOL) to the sender.
+///
+/// Account order (matches Meteora DLMM IDL):
+///   position, lb_pair, bin_array_lower, bin_array_upper, owner(signer),
+///   rent_receiver(writable), event_authority, program
+pub fn ix_close_position(
+    sender: &Pubkey,
+    position: &Pubkey,
+    lb_pair: &Pubkey,
+    bin_array_lower: &Pubkey,
+    bin_array_upper: &Pubkey,
+) -> Instruction {
+    // sha256("global:close_position")[:8]
+    let discriminator: [u8; 8] = [123, 134, 81, 0, 49, 68, 98, 98];
+    let ev_auth = event_authority();
+
+    Instruction {
+        program_id: DLMM_PROGRAM,
+        accounts: vec![
+            AccountMeta::new(*position, false),          // position (writable)
+            AccountMeta::new(*lb_pair, false),           // lb_pair (writable)
+            AccountMeta::new(*bin_array_lower, false),   // bin_array_lower (writable)
+            AccountMeta::new(*bin_array_upper, false),   // bin_array_upper (writable)
+            AccountMeta::new_readonly(*sender, true),    // owner (signer)
+            AccountMeta::new(*sender, false),            // rent_receiver (writable)
+            AccountMeta::new_readonly(ev_auth, false),
+            AccountMeta::new_readonly(DLMM_PROGRAM, false), // program self-ref
+        ],
+        data: discriminator.to_vec(),
+    }
+}
+
+/// Build `SetComputeUnitLimit` instruction (ComputeBudget program).
+/// Call this as the FIRST instruction in any transaction that may exceed the
+/// default 200k CU limit (e.g. remove_liquidity_by_range over wide bin ranges).
+pub fn ix_set_compute_unit_limit(units: u32) -> Instruction {
+    const COMPUTE_BUDGET: Pubkey =
+        solana_sdk::pubkey!("ComputeBudget111111111111111111111111111111");
+    let mut data = vec![0x02u8]; // SetComputeUnitLimit discriminator (compact wire format: 0x02 = SetComputeUnitLimit, 0x03 = SetComputeUnitPrice)
+    data.extend_from_slice(&units.to_le_bytes());
+    Instruction {
+        program_id: COMPUTE_BUDGET,
+        accounts: vec![],
         data,
     }
 }

@@ -5,25 +5,27 @@ use serde_json::{json, Value};
 const SOLANA_RPC: &str = "https://api.mainnet-beta.solana.com";
 const SOLANA_RPC_FALLBACK: &str = "https://rpc.ankr.com/solana";
 
-/// POST to Solana RPC; falls back to secondary endpoint on 429.
+/// POST to Solana RPC.
+/// Retries primary endpoint up to 5 times with increasing backoff before falling
+/// back to the secondary. The secondary (ankr) may have stale data, so we prefer
+/// to wait for the primary rather than accepting potentially wrong results.
 async fn rpc_call(client: &Client, body: &Value) -> anyhow::Result<Value> {
-    let endpoints = [SOLANA_RPC, SOLANA_RPC_FALLBACK];
-    for (i, endpoint) in endpoints.iter().enumerate() {
-        if i > 0 {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    // Primary: up to 5 attempts with exponential backoff
+    for attempt in 0u32..5 {
+        if attempt > 0 {
+            let delay = 300 * (1u64 << attempt.min(4)); // 600, 1200, 2400, 2400 ms
+            tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
         }
-        for attempt in 0u32..2 {
-            if attempt > 0 {
-                tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-            }
-            let resp = client.post(*endpoint).json(body).send().await?;
-            if resp.status().as_u16() == 429 {
-                continue;
-            }
-            return resp.json::<Value>().await.map_err(|e| anyhow::anyhow!("RPC JSON parse: {e}"));
+        let resp = client.post(SOLANA_RPC).json(body).send().await?;
+        if resp.status().as_u16() == 429 {
+            continue;
         }
+        return resp.json::<Value>().await.map_err(|e| anyhow::anyhow!("RPC JSON parse: {e}"));
     }
-    anyhow::bail!("Solana RPC rate limited on all endpoints")
+    // Last resort: secondary endpoint (may have stale account data)
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let resp = client.post(SOLANA_RPC_FALLBACK).json(body).send().await?;
+    resp.json::<Value>().await.map_err(|e| anyhow::anyhow!("RPC JSON parse (fallback): {e}"))
 }
 
 pub async fn get_account_data(client: &Client, address: &str) -> anyhow::Result<Vec<u8>> {
@@ -87,6 +89,10 @@ pub async fn account_exists(client: &Client, address: &str) -> anyhow::Result<bo
         "params": [address, {"encoding": "base64"}]
     });
     let resp: Value = rpc_call(client, &body).await?;
+    // If the RPC returned an error object, propagate it — don't silently return false.
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!("RPC error checking account {address}: {err}");
+    }
     Ok(resp["result"]["value"].is_object())
 }
 
@@ -161,6 +167,35 @@ pub fn parse_lb_pair(data: &[u8]) -> anyhow::Result<LbPairInfo> {
     })
 }
 
+/// Check whether a DLMM PositionV2 account has any non-zero liquidity shares.
+///
+/// Liquidity shares: 70 × u128 LE at offsets [72..1192].
+/// All-zero means the position is empty — attempting remove_liquidity will error.
+pub fn position_has_liquidity(data: &[u8]) -> bool {
+    if data.len() < 1192 {
+        return false;
+    }
+    data[72..1192].chunks_exact(16).any(|chunk| {
+        u128::from_le_bytes(chunk.try_into().unwrap_or([0u8; 16])) != 0
+    })
+}
+
+/// Parse lower_bin_id and upper_bin_id from a DLMM Position account (8120 bytes).
+///
+/// Offsets verified against on-chain data:
+///   lower_bin_id  i32  [7912..7916]
+///   upper_bin_id  i32  [7916..7920]
+pub fn parse_position_bins(data: &[u8]) -> anyhow::Result<(i32, i32)> {
+    anyhow::ensure!(
+        data.len() >= 7920,
+        "Position account data too short: {} bytes (expected ≥7920)",
+        data.len()
+    );
+    let lower_bin_id = i32::from_le_bytes(data[7912..7916].try_into()?);
+    let upper_bin_id = i32::from_le_bytes(data[7916..7920].try_into()?);
+    Ok((lower_bin_id, upper_bin_id))
+}
+
 /// Get token decimals from SPL Mint account data.
 /// Decimals live at offset 44 in the standard Mint layout.
 pub fn parse_mint_decimals(data: &[u8]) -> u8 {
@@ -169,4 +204,97 @@ pub fn parse_mint_decimals(data: &[u8]) -> u8 {
     } else {
         6
     }
+}
+
+/// On-chain DLMM position (minimal fields, sourced directly from RPC).
+pub struct OnChainPosition {
+    pub address: String,
+    pub lb_pair: String,
+    pub owner: String,
+    pub lower_bin_id: i32,
+    pub upper_bin_id: i32,
+}
+
+/// Scan on-chain DLMM PositionV2 accounts (8120 bytes) owned by a wallet.
+///
+/// Uses `getProgramAccounts` with:
+///   - dataSize filter: 8120
+///   - memcmp at offset 40: owner pubkey (bs58)
+///   - optionally memcmp at offset 8: lb_pair pubkey (pool filter)
+///
+/// Layout offsets (Anchor PositionV2):
+///   [0..8]    discriminator
+///   [8..40]   lb_pair  (Pubkey)
+///   [40..72]  owner    (Pubkey)
+///   [7912..7916]  lower_bin_id (i32 LE)
+///   [7916..7920]  upper_bin_id (i32 LE)
+pub async fn get_dlmm_positions_by_owner(
+    client: &Client,
+    program_id: &str,
+    owner_bs58: &str,
+    pool_filter: Option<&str>,
+) -> anyhow::Result<Vec<OnChainPosition>> {
+    let mut filters = vec![
+        serde_json::json!({"dataSize": 8120}),
+        serde_json::json!({"memcmp": {"offset": 40, "bytes": owner_bs58}}),
+    ];
+    if let Some(pool) = pool_filter {
+        filters.push(serde_json::json!({"memcmp": {"offset": 8, "bytes": pool}}));
+    }
+
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getProgramAccounts",
+        "params": [
+            program_id,
+            {
+                "encoding": "base64",
+                "filters": filters
+            }
+        ]
+    });
+
+    let resp: serde_json::Value = rpc_call(client, &body).await?;
+
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!("getProgramAccounts RPC error: {err}");
+    }
+
+    let accounts = resp["result"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("getProgramAccounts: unexpected response format"))?;
+
+    let mut positions = Vec::new();
+    for account in accounts {
+        let pubkey = account["pubkey"].as_str().unwrap_or("").to_string();
+        if pubkey.is_empty() {
+            continue;
+        }
+        let data_b64 = match account["account"]["data"][0].as_str() {
+            Some(s) => s,
+            None => continue,
+        };
+        let data = match B64.decode(data_b64) {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+        if data.len() < 7920 {
+            continue;
+        }
+
+        let lb_pair = bs58::encode(&data[8..40]).into_string();
+        let owner = bs58::encode(&data[40..72]).into_string();
+        let (lower_bin_id, upper_bin_id) = parse_position_bins(&data)?;
+
+        positions.push(OnChainPosition {
+            address: pubkey,
+            lb_pair,
+            owner,
+            lower_bin_id,
+            upper_bin_id,
+        });
+    }
+
+    Ok(positions)
 }

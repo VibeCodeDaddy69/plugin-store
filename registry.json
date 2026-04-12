@@ -759,9 +759,9 @@
       }
     },
     {
-      "name": "pancakeswap",
-      "version": "0.2.3",
-      "description": "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
+      "name": "pancakeswap-v3",
+      "version": "1.0.0",
+      "description": "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on Ethereum, BNB Chain, Base, Arbitrum, and Linea",
       "author": {
         "name": "GeoGu360",
         "github": "GeoGu360"
@@ -773,9 +773,11 @@
         "swap",
         "liquidity",
         "pancakeswap",
+        "ethereum",
         "bnb-chain",
         "base",
-        "arbitrum"
+        "arbitrum",
+        "linea"
       ],
       "type": "community-developer",
       "components": {
@@ -784,22 +786,28 @@
         },
         "binary": {
           "repo": "okx/plugin-store",
-          "asset_pattern": "pancakeswap-{target}",
+          "asset_pattern": "pancakeswap-v3-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/pancakeswap@0.2.3"
+          "release_tag": "plugins/pancakeswap-v3@1.0.0"
         }
       },
       "api_calls": [
+        "ethereum-rpc.publicnode.com",
         "bsc-rpc.publicnode.com",
         "base-rpc.publicnode.com",
         "arbitrum-one-rpc.publicnode.com",
+        "linea-rpc.publicnode.com",
         "api.studio.thegraph.com",
         "api.thegraph.com"
       ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
-          "base"
+          "ethereum",
+          "bsc",
+          "base",
+          "arbitrum",
+          "linea"
         ],
         "protocols": [],
         "risk_level": "medium"

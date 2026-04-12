@@ -33,7 +33,7 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install pancakeswap binary (auto-injected)
 
 ```bash
-if ! command -v pancakeswap >/dev/null 2>&1; then
+if ! command -v pancakeswap-v3 >/dev/null 2>&1; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
@@ -49,15 +49,15 @@ if ! command -v pancakeswap >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap@0.2.2/pancakeswap-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap${EXT}
-  chmod +x ~/.local/bin/pancakeswap${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3@1.0.0/pancakeswap-v3-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap-v3${EXT}
+  chmod +x ~/.local/bin/pancakeswap-v3${EXT}
 fi
 ```
 
 ### Report install (auto-injected, runs once)
 
 ```bash
-REPORT_FLAG="$HOME/.plugin-store/reported/pancakeswap"
+REPORT_FLAG="$HOME/.plugin-store/reported/pancakeswap-v3"
 if [ ! -f "$REPORT_FLAG" ]; then
   mkdir -p "$HOME/.plugin-store/reported"
   # Device fingerprint → SHA256 → 32-char device ID
@@ -71,11 +71,11 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap","version":"0.2.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v3","version":"1.0.0"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
-    -d '{"pluginName":"pancakeswap","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
+    -d '{"pluginName":"pancakeswap-v3","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
   touch "$REPORT_FLAG"
 fi
 ```
@@ -128,7 +128,7 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install pancakeswap binary (auto-injected)
 
 ```bash
-if ! command -v pancakeswap >/dev/null 2>&1; then
+if ! command -v pancakeswap-v3 >/dev/null 2>&1; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
@@ -144,15 +144,15 @@ if ! command -v pancakeswap >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap@0.2.3/pancakeswap-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap${EXT}
-  chmod +x ~/.local/bin/pancakeswap${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3@1.0.0/pancakeswap-v3-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap-v3${EXT}
+  chmod +x ~/.local/bin/pancakeswap-v3${EXT}
 fi
 ```
 
 ### Report install (auto-injected, runs once)
 
 ```bash
-REPORT_FLAG="$HOME/.plugin-store/reported/pancakeswap"
+REPORT_FLAG="$HOME/.plugin-store/reported/pancakeswap-v3"
 if [ ! -f "$REPORT_FLAG" ]; then
   mkdir -p "$HOME/.plugin-store/reported"
   DEV_RAW="$(hostname):$(uname -s):$(uname -m):$HOME"
@@ -163,10 +163,10 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap","version":"0.2.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v3","version":"1.0.0"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
-    -d '{"pluginName":"pancakeswap","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
+    -d '{"pluginName":"pancakeswap-v3","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
   touch "$REPORT_FLAG"
 fi
 ```

@@ -52,9 +52,9 @@ pub async fn run(
     let pending_wei = rpc::pending_cake(cfg.masterchef_v3, token_id, &rpc)
         .await
         .unwrap_or(0);
-    let pending_cake = rpc::format_cake_wei(pending_wei);
+    let pending_cake = pending_wei as f64 / 1e18;
     eprintln!(
-        "Withdrawing NFT {} from MasterChefV3. Pending CAKE to harvest: {}",
+        "Withdrawing NFT {} from MasterChefV3. Pending CAKE to harvest: {:.6}",
         token_id, pending_cake
     );
 
@@ -83,7 +83,7 @@ pub async fn run(
             "token_id": token_id,
             "action": "unfarm",
             "txHash": tx_hash,
-            "pending_cake_harvested": pending_cake,
+            "pending_cake_harvested": format!("{:.6}", pending_cake),
             "recipient": recipient,
             "masterchef_v3": cfg.masterchef_v3,
             "raw": result

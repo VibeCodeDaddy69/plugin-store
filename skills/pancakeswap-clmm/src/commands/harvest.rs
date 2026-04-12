@@ -52,9 +52,9 @@ pub async fn run(
         return Ok(());
     }
 
-    let pending_cake = rpc::format_cake_wei(pending_wei);
+    let pending_cake = pending_wei as f64 / 1e18;
     eprintln!(
-        "Harvesting {} CAKE for token ID {} on chain {}...",
+        "Harvesting {:.6} CAKE for token ID {} on chain {}...",
         pending_cake, token_id, chain_id
     );
 
@@ -84,7 +84,7 @@ pub async fn run(
             "action": "harvest",
             "txHash": tx_hash,
             "pending_cake_harvested_wei": pending_wei.to_string(),
-            "pending_cake_harvested": pending_cake,
+            "pending_cake_harvested": format!("{:.6}", pending_cake),
             "recipient": recipient,
             "masterchef_v3": cfg.masterchef_v3,
             "raw": result

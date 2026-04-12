@@ -1,6 +1,4 @@
-/// Chain configuration: RPC URLs and contract addresses.
-/// Contract addresses verified against PancakeSwap official deployments:
-/// https://docs.pancakeswap.finance/developers/smart-contracts/pancakeswap-exchange/v3-contracts
+/// Chain configuration: RPC URLs and contract addresses
 
 #[allow(dead_code)]
 pub struct ChainConfig {

@@ -21,6 +21,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Check whether Polymarket is accessible from your current IP (run before topping up USDC)
+    CheckAccess,
+
     /// List active prediction markets (no auth required)
     ListMarkets {
         /// Maximum number of markets to return
@@ -174,6 +177,9 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
+        Commands::CheckAccess => {
+            commands::check_access::run().await
+        }
         Commands::ListMarkets { limit, keyword } => {
             commands::list_markets::run(limit, keyword.as_deref()).await
         }

@@ -167,7 +167,7 @@ onchainos wallet balance --chain 137
 
 Look for `USDC.e` (contract `0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`). If your balance is zero or insufficient:
 
-- **From another chain**: bridge USDC to Polygon via the [OKX Web3 bridge](https://www.okx.com/web3/bridge) or [Polygon Bridge](https://portal.polygon.technology/)
+- **From another chain**: bridge USDC to Polygon via the OKX Web3 bridge or Polygon Bridge
 - **From a CEX**: withdraw USDC to your Polygon address via the Polygon network
 - **Minimum suggested**: $5–$10 to cover a small test trade plus gas (Polygon gas is cheap, typically < $0.01 per tx)
 

@@ -162,10 +162,10 @@ jobs:
             BUILD_MAIN=$(yq '.build.main // ""' "$YAML")
 
             ITEM=$(jq -n \
-              --arg name "$PLUGIN_NAME" --arg lang "$BUILD_LANG" \
+              --arg name "$PLUGIN_NAME" --arg lang "$BUILD_LANG" --arg version "$VERSION" \
               --arg repo "$SOURCE_REPO" --arg commit "$SOURCE_COMMIT" \
               --arg dir "$SOURCE_DIR" --arg bin "$BINARY_NAME" --arg main "$BUILD_MAIN" \
-              '{name:$name, lang:$lang, source_repo:$repo, source_commit:$commit, source_dir:$dir, binary_name:$bin, main:$main}')
+              '{name:$name, lang:$lang, version:$version, source_repo:$repo, source_commit:$commit, source_dir:$dir, binary_name:$bin, main:$main}')
             BUILD_PLUGINS=$(echo "$BUILD_PLUGINS" | jq --argjson item "$ITEM" '. + [$item]')
             echo "Need build: $PLUGIN_NAME ($BUILD_LANG)"
           done
@@ -481,13 +481,15 @@ jobs:
             PLUGIN=$(echo "$ENCODED" | base64 -d)
             NAME=$(echo "$PLUGIN" | jq -r '.name')
             BIN=$(echo "$PLUGIN" | jq -r '.binary_name')
+            # Use version from detect-time JSON (same commit as build),
+            # NOT from plugin.yaml on disk (which could be from a newer commit)
+            VERSION=$(echo "$PLUGIN" | jq -r '.version')
 
             YAML_FILE="${REPO_ROOT}/skills/${NAME}/plugin.yaml"
             if [ ! -f "$YAML_FILE" ]; then
               echo "::warning::$YAML_FILE not found, skipping release for $NAME"
               continue
             fi
-            VERSION=$(yq '.version' "$YAML_FILE")
 
             RELEASE_DIR="${REPO_ROOT}/release-${NAME}"
             mkdir -p "$RELEASE_DIR"

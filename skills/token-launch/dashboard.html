@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>一键发币 — Token Launch</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#060610;color:#e0e0e8;min-height:100vh}
+
+/* ── Header ────────────────────────────────────── */
+.header{background:linear-gradient(135deg,#0c0618 0%,#0a1220 50%,#0c0618 100%);padding:20px 28px 16px;border-bottom:1px solid #1e1636}
+.header-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.header h1{font-size:20px;font-weight:700;color:#e0e0e8}
+.header h1 span{color:#a78bfa}
+.mode-badge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:0.5px}
+.mode-live{background:#162016;color:#4ade80;border:1px solid #22543d}
+.mode-dry{background:#1a1a0a;color:#fbbf24;border:1px solid #4a4a1a}
+.wallets{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+.wcard{background:#0e0e1a;border:1px solid #1e1e30;border-radius:10px;padding:10px 16px;min-width:200px;display:flex;align-items:center;gap:12px}
+.wcard-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.wcard-icon.sol{background:linear-gradient(135deg,#9945ff,#14f195);color:#fff}
+.wcard-icon.bsc{background:linear-gradient(135deg,#f0b90b,#f8d12f);color:#1a1a2e}
+.wcard-info .chain{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px}
+.wcard-info .addr{font-size:12px;color:#a78bfa;font-family:'SF Mono',monospace}
+.wcard-info .bal{font-size:15px;font-weight:600;color:#e0e0e8}
+
+/* ── Stats ─────────────────────────────────────── */
+.stats{display:flex;gap:10px;padding:16px 28px 0;flex-wrap:wrap}
+.stat{background:#0e0e1a;border:1px solid #1e1e30;border-radius:10px;padding:14px 20px;min-width:100px;text-align:center;flex:1}
+.stat .val{font-size:26px;font-weight:700;color:#a78bfa}
+.stat .label{font-size:10px;color:#666;margin-top:2px;text-transform:uppercase;letter-spacing:0.8px}
+
+/* ── Content ───────────────────────────────────── */
+.content{padding:20px 28px;max-width:900px}
+.section-title{font-size:13px;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;font-weight:600}
+
+/* ── Token Row ─────────────────────────────────── */
+.token-list{display:flex;flex-direction:column;gap:2px}
+
+.token-row{display:flex;align-items:center;gap:0;background:#0e0e1a;border:1px solid #141420;border-radius:12px;overflow:hidden;transition:border-color .15s,background .15s}
+.token-row:hover{border-color:#2a2040;background:#100e1e}
+.token-row.latest{border-color:#3a2a5a;border-width:1px;background:#110e20}
+
+/* Number column */
+.row-num{width:40px;flex-shrink:0;text-align:center;font-size:12px;font-weight:700;color:#333;padding:14px 0;align-self:stretch;display:flex;align-items:center;justify-content:center}
+.token-row.latest .row-num{color:#a78bfa}
+
+/* Image */
+.row-img{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#1a1a2e;flex-shrink:0;margin:8px 0}
+.row-img-ph{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#1a1030,#0e1a2a);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#444;margin:8px 0}
+
+/* Main info */
+.row-info{flex:1;min-width:0;padding:10px 14px}
+.row-name{font-size:14px;font-weight:700;color:#e0e0e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-name .sym{color:#a78bfa;font-weight:600;font-size:13px}
+.row-desc{font-size:11px;color:#484858;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Launchpad chip */
+.row-lp{flex-shrink:0;padding:0 6px}
+.lp-chip{font-size:10px;padding:3px 8px;border-radius:5px;font-weight:500;white-space:nowrap}
+.lp-pumpfun{background:#1a1030;color:#c084fc;border:1px solid #2e1a50}
+.lp-bags{background:#0a1625;color:#60a5fa;border:1px solid #1a3050}
+.lp-letsbonk{background:#1a1a0a;color:#fbbf24;border:1px solid #3a3a1a}
+.lp-moonit{background:#1a120a;color:#fb923c;border:1px solid #3a2a1a}
+.lp-fourmeme{background:#1a0a14;color:#f472b6;border:1px solid #3a1a2a}
+.lp-flap{background:#14081e;color:#a78bfa;border:1px solid #2a1840}
+
+/* Bonding curve */
+.row-bonding{width:120px;flex-shrink:0;padding:0 10px}
+.bc-wrap{display:flex;align-items:center;gap:6px}
+.bc-bar-bg{flex:1;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden}
+.bc-bar{height:100%;border-radius:3px;transition:width .5s ease}
+.bc-bar.low{background:linear-gradient(90deg,#334155,#475569)}
+.bc-bar.mid{background:linear-gradient(90deg,#a78bfa,#7c3aed)}
+.bc-bar.high{background:linear-gradient(90deg,#4ade80,#22c55e)}
+.bc-pct{font-size:11px;font-weight:600;color:#a78bfa;min-width:34px;text-align:right}
+.bc-pct.na{color:#333}
+
+/* Buy amount */
+.row-buy{width:80px;flex-shrink:0;text-align:right;padding:0 4px}
+.buy-val{font-size:12px;font-weight:600;color:#4ade80}
+.buy-val.none{color:#333}
+
+/* Status badge */
+.row-status{width:70px;flex-shrink:0;text-align:center;padding:0 4px}
+.badge{display:inline-block;padding:3px 8px;border-radius:5px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+.badge-ok{background:#0a1f14;color:#4ade80;border:1px solid #166534}
+.badge-fail{background:#1f0a0a;color:#f87171;border:1px solid #7f1d1d}
+.badge-dry{background:#1a1a0a;color:#fbbf24;border:1px solid #4a4a1a}
+
+/* Time */
+.row-time{width:64px;flex-shrink:0;text-align:right;font-size:11px;color:#444;padding:0 4px}
+
+/* Links */
+.row-links{width:90px;flex-shrink:0;display:flex;gap:4px;justify-content:center;padding:0 8px}
+.row-links a{font-size:10px;color:#a78bfa;text-decoration:none;padding:3px 6px;border-radius:4px;background:#14101e;border:1px solid #1e1e30;transition:background .15s}
+.row-links a:hover{background:#1e1636}
+
+/* Socials in row */
+.row-socials{display:flex;gap:3px;flex-shrink:0;padding:0 4px}
+.s-icon{width:16px;height:16px;border-radius:3px;background:#14101e;display:flex;align-items:center;justify-content:center;font-size:9px;color:#555;text-decoration:none;transition:color .15s}
+.s-icon:hover{color:#a78bfa}
+
+/* ── Expanded detail (live stats) ──────────────── */
+.row-detail{display:none;background:#0a0a16;border:1px solid #141420;border-top:none;border-radius:0 0 12px 12px;margin-top:-3px;padding:10px 18px 12px 54px}
+.token-row.latest+.row-detail{border-color:#3a2a5a;border-top:none}
+.row-detail.open{display:flex;gap:0}
+.detail-stat{flex:1;text-align:center}
+.detail-stat .dv{font-size:14px;font-weight:600;color:#e0e0e8}
+.detail-stat .dl{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px}
+
+/* ── Empty State ───────────────────────────────── */
+.empty{text-align:center;padding:60px 20px;color:#444;font-size:14px}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:0.3}
+.empty-sub{font-size:12px;color:#333;margin-top:6px;font-family:'SF Mono',monospace}
+
+/* ── Responsive ────────────────────────────────── */
+@media(max-width:700px){
+  .row-bonding,.row-socials,.row-desc{display:none}
+  .row-info{padding:8px 10px}
+  .row-num{width:30px}
+  .row-buy{width:60px}
+  .row-links{width:70px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1><span>一键发币</span> Token Launch</h1>
+    <span class="mode-badge" id="mode-badge">—</span>
+  </div>
+  <div class="wallets" id="wallets"></div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="content">
+  <div class="section-title">Launch History</div>
+  <div class="token-list" id="list"></div>
+  <div class="empty" id="empty" style="display:none">
+    <div class="empty-icon">🚀</div>
+    No tokens launched yet.<br>
+    <div class="empty-sub">await quick_launch("Name", "SYM", "desc", "image.png")</div>
+  </div>
+</div>
+
+<script>
+const LP={pumpfun:'pump.fun',bags:'Bags.fm',letsbonk:'LetsBonk',moonit:'Moonit',fourmeme:'Four.Meme',flap:'Flap.sh'};
+const SYM={solana:'SOL',bsc:'BNB'};
+const IPFS='https://ipfs.io/ipfs/';
+const statsCache={};
+
+function short(a,n=5){return a?(a.slice(0,n)+'…'+a.slice(-4)):'-'}
+function ago(iso){
+  const s=Math.floor((Date.now()-new Date(iso))/1000);
+  if(s<0)return 'just now';
+  if(s<60)return s+'s ago';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+function fmtUsd(v){
+  if(!v)return '—';
+  if(v>=1e6)return '$'+(v/1e6).toFixed(2)+'M';
+  if(v>=1e3)return '$'+(v/1e3).toFixed(1)+'K';
+  if(v>=1)return '$'+v.toFixed(2);
+  return '$'+v.toFixed(6);
+}
+
+function renderWallets(wr){
+  const el=document.getElementById('wallets');
+  let h='';
+  if(wr.sol&&wr.sol.address)
+    h+=`<div class="wcard"><div class="wcard-icon sol">S</div><div class="wcard-info"><div class="chain">Solana</div><div class="addr">${short(wr.sol.address,6)}</div><div class="bal">${wr.sol.balance.toFixed(4)} SOL</div></div></div>`;
+  if(wr.bsc&&wr.bsc.address)
+    h+=`<div class="wcard"><div class="wcard-icon bsc">B</div><div class="wcard-info"><div class="chain">BNB Smart Chain</div><div class="addr">${short(wr.bsc.address,6)}</div><div class="bal">${wr.bsc.balance.toFixed(4)} BNB</div></div></div>`;
+  el.innerHTML=h;
+  const badge=document.getElementById('mode-badge');
+  if(wr.mode==='LIVE'){badge.textContent='LIVE';badge.className='mode-badge mode-live'}
+  else{badge.textContent='DRY RUN';badge.className='mode-badge mode-dry'}
+}
+
+function renderStats(lr){
+  const el=document.getElementById('stats');
+  const total=lr.length, ok=lr.filter(l=>l.success).length;
+  const pads=new Set(lr.map(l=>l.launchpad)).size;
+  const totalBuy=lr.reduce((s,l)=>s+(l.buy_amount||0),0);
+  el.innerHTML=`
+    <div class="stat"><div class="val">${total}</div><div class="label">Launches</div></div>
+    <div class="stat"><div class="val">${ok}</div><div class="label">Success</div></div>
+    <div class="stat"><div class="val">${total-ok}</div><div class="label">Failed</div></div>
+    <div class="stat"><div class="val">${pads}</div><div class="label">Launchpads</div></div>
+    <div class="stat"><div class="val">${totalBuy>0?totalBuy.toFixed(2):'0'}</div><div class="label">Total Buy</div></div>`;
+}
+
+function bcHtml(pct){
+  if(pct==null) return `<div class="bc-wrap"><div class="bc-bar-bg"><div class="bc-bar low" style="width:0"></div></div><span class="bc-pct na">—</span></div>`;
+  const c=pct>=80?'high':pct>=40?'mid':'low';
+  return `<div class="bc-wrap"><div class="bc-bar-bg"><div class="bc-bar ${c}" style="width:${Math.min(pct,100)}%"></div></div><span class="bc-pct">${pct.toFixed(1)}%</span></div>`;
+}
+
+function renderRow(l, idx, total, live){
+  const lp=l.launchpad||'pumpfun';
+  const chain=l.chain||'solana';
+  const sym=SYM[chain]||'';
+  const isDry=l.token_address&&l.token_address.startsWith('DRY_RUN');
+  const isLatest=idx===0;
+  const num=total-idx;
+
+  // Image
+  const cid=l.image_cid;
+  const hasImg=cid&&cid.startsWith('Qm')&&cid.length>10;
+  const img=hasImg
+    ?`<img class="row-img" src="${IPFS}${cid}" alt="" onerror="this.outerHTML='<div class=row-img-ph>${l.symbol?l.symbol[0]:'?'}</div>'">`
+    :`<div class="row-img-ph">${l.symbol?l.symbol[0]:'?'}</div>`;
+
+  // Status
+  let badge;
+  if(isDry)badge='<span class="badge badge-dry">DRY RUN</span>';
+  else if(l.success)badge='<span class="badge badge-ok">Live</span>';
+  else badge='<span class="badge badge-fail">Failed</span>';
+
+  // Buy
+  const buy=l.buy_amount>0
+    ?`<span class="buy-val">+${l.buy_amount} ${sym}</span>`
+    :`<span class="buy-val none">—</span>`;
+
+  // Bonding
+  const bp=live?live.bonding_pct:null;
+
+  // Socials
+  let soc='';
+  if(l.twitter)soc+=`<a class="s-icon" href="${l.twitter}" target="_blank" title="Twitter">𝕏</a>`;
+  if(l.telegram)soc+=`<a class="s-icon" href="${l.telegram}" target="_blank" title="Telegram">✈</a>`;
+  if(l.website)soc+=`<a class="s-icon" href="${l.website}" target="_blank" title="Web">⌂</a>`;
+
+  // Links
+  let links='';
+  if(l.explorer_url)links+=`<a href="${l.explorer_url}" target="_blank">TX</a>`;
+  if(l.trade_page_url)links+=`<a href="${l.trade_page_url}" target="_blank">Trade</a>`;
+
+  // Detail row (live stats for real tokens)
+  let detail='';
+  if(live&&live.holders!=null&&!isDry){
+    detail=`<div class="row-detail open">
+      <div class="detail-stat"><div class="dv">${fmtUsd(live.price_usd)}</div><div class="dl">Price</div></div>
+      <div class="detail-stat"><div class="dv">${fmtUsd(live.mcap_usd)}</div><div class="dl">MCap</div></div>
+      <div class="detail-stat"><div class="dv">${live.holders||0}</div><div class="dl">Holders</div></div>
+      <div class="detail-stat"><div class="dv">${fmtUsd(live.volume_1h)}</div><div class="dl">Vol 1h</div></div>
+      <div class="detail-stat"><div class="dv">${(live.buy_count||0)}/${(live.sell_count||0)}</div><div class="dl">B/S</div></div>
+    </div>`;
+  }
+
+  return `<div class="token-row${isLatest?' latest':''}" title="${l.description||''}">
+    <div class="row-num">#${num}</div>
+    ${img}
+    <div class="row-info">
+      <div class="row-name">${l.name} <span class="sym">$${l.symbol}</span></div>
+      <div class="row-desc">${l.description||''}</div>
+    </div>
+    <div class="row-lp"><span class="lp-chip lp-${lp}">${LP[lp]||lp}</span></div>
+    <div class="row-bonding">${bcHtml(bp)}</div>
+    <div class="row-buy">${buy}</div>
+    <div class="row-status">${badge}</div>
+    <div class="row-socials">${soc}</div>
+    <div class="row-time">${ago(l.timestamp)}</div>
+    <div class="row-links">${links}</div>
+  </div>${detail}`;
+}
+
+async function fetchLive(launches){
+  const real=launches.filter(l=>l.success&&l.token_address&&!l.token_address.startsWith('DRY_RUN'));
+  await Promise.all(real.slice(0,6).map(async l=>{
+    const k=l.token_address;
+    if(statsCache[k]&&(Date.now()-statsCache[k]._ts<30000))return;
+    try{
+      const c=l.chain==='solana'?'501':'56';
+      const r=await fetch(`/api/token-stats?address=${k}&chain=${c}`);
+      const d=await r.json();d._ts=Date.now();statsCache[k]=d;
+    }catch(e){}
+  }));
+}
+
+async function refresh(){
+  try{
+    const [lr,wr]=await Promise.all([
+      fetch('/api/launches').then(r=>r.json()),
+      fetch('/api/wallet').then(r=>r.json())
+    ]);
+    renderWallets(wr);
+    renderStats(lr);
+
+    const el=document.getElementById('list');
+    const empty=document.getElementById('empty');
+    if(!lr.length){empty.style.display='block';el.innerHTML='';return}
+    empty.style.display='none';
+
+    const sorted=lr.slice().reverse();
+    const total=lr.length;
+
+    // Render immediately
+    el.innerHTML=sorted.map((l,i)=>renderRow(l,i,total,statsCache[l.token_address]||null)).join('');
+
+    // Fetch live data then re-render
+    fetchLive(lr).then(()=>{
+      el.innerHTML=sorted.map((l,i)=>renderRow(l,i,total,statsCache[l.token_address]||null)).join('');
+    });
+  }catch(e){console.error('refresh',e)}
+}
+
+refresh();
+setInterval(refresh,8000);
+</script>
+</body></html>

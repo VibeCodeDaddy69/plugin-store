@@ -1,5 +1,5 @@
 ---
-name: orca
+name: orca-plugin
 description: "Concentrated liquidity AMM on Solana — swap tokens and query pools via the Whirlpools CLMM program. Trigger phrases: swap on orca, orca swap, swap tokens on solana, orca pools, get swap quote, whirlpool swap, orca dex. Chinese: Orca兑换, 在Orca上交换代币, 查询Orca流动性池, 获取兑换报价"
 license: MIT
 metadata:

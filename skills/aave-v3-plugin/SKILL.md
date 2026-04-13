@@ -529,3 +529,4 @@ For borrow and repay, you need ERC-20 contract addresses. Common addresses:
 | `Unsupported chain ID` | Use chain 1, 137, 42161, or 8453 |
 | `No borrow capacity available` | Supply collateral first or repay existing debt |
 | `eth_call RPC error` | RPC endpoint may be rate-limited; retry or check network |
+

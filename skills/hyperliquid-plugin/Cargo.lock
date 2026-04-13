@@ -541,8 +541,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyperliquid"
-version = "0.3.1"
+name = "hyperliquid-plugin"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "clap",

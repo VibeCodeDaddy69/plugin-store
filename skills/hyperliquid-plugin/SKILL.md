@@ -1,7 +1,7 @@
 ---
 name: hyperliquid
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: 0.3.1
+version: 0.3.2
 author: GeoGu360
 tags:
   - perps
@@ -60,7 +60,7 @@ OS=$(uname -s | tr A-Z a-z)
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.1/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.2/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
   chmod +x ~/.local/bin/.hyperliquid-plugin-core${EXT}
 
 # Generate wrapper script (version check + exec core binary)
@@ -99,7 +99,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"hyperliquid-plugin","version":"0.3.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"hyperliquid-plugin","version":"0.3.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -347,6 +347,15 @@ hyperliquid order \
 
 **Display:** `coin`, `side`, `size`, `type`, `currentMidPrice`, `stopLoss`, `takeProfit`. Do not render raw action payloads.
 
+**Pre-flight balance check:**
+Before each order the binary queries Perp + Spot + Arbitrum USDC balances in parallel and shows a `fund_landscape` table in the preview. If the estimated required margin (`notional / leverage`) exceeds `perp_withdrawable`, the command stops immediately with a `tip` pointing to `transfer` (Spot→Perp) or `deposit` (Arbitrum→Perp).
+
+**Size precision & minimum notional:**
+`--size` is automatically rounded to the coin's `szDecimals` (BTC: 5 dp, ETH: 4 dp, etc.). If the resulting notional is below the exchange minimum of **$10**, one lot is silently added and logged to stderr.
+
+**SL/TP price precision:**
+All prices (trigger + worst-fill limit) are automatically rounded to the coin's tick size via `szDecimals` significant-figure rounding (BTC → integers, ETH → 1 dp, SOL → 2 dp). Raw decimal values like `63683.1` or `77834.9` are rounded without user action.
+
 **Bracket order behavior:**
 - When `--sl-px` or `--tp-px` is provided, the request uses `grouping: normalTpsl`
 - TP/SL child orders are linked to the entry — they activate only when the entry fills
@@ -426,6 +435,8 @@ hyperliquid tpsl --coin BTC --tp-px 110000 --size 0.005 --confirm
 - SL must be **below** current price for longs; **above** for shorts
 - TP must be **above** current price for longs; **below** for shorts
 - Both use market execution with 10% slippage tolerance (matching HL UI default)
+
+**Price precision:** trigger and worst-fill prices are automatically rounded to the coin's tick size (`szDecimals` significant figures). Pass any decimal value — the binary will round it silently (e.g. `63683.1 → 63683` for BTC).
 
 **Note:** SL and TP are placed as independent orders (`grouping: na`). Whichever triggers first closes the position; cancel the other manually or place a new `tpsl` to replace it.
 
@@ -657,14 +668,14 @@ hyperliquid transfer --amount 10 --direction spot-to-perp --confirm
 
 ### 12. `address` — Show Wallet Address & Balances
 
-Displays your wallet address with USDC balance. Defaults to HyperEVM; use `--arbitrum` or `--all`.
+Displays your wallet address with USDC balance. Defaults to **Arbitrum** (most useful for deposit flow). Use `--hyp-evm` to show HyperEVM (USDC contract TBD), or `--all` for both.
 
 ```bash
-# HyperEVM address (default)
+# Arbitrum address + USDC balance (default)
 hyperliquid address
 
-# Arbitrum address
-hyperliquid address --arbitrum
+# HyperEVM address (opt-in)
+hyperliquid address --hyp-evm
 
 # Both addresses with balances
 hyperliquid address --all
@@ -864,6 +875,13 @@ All data returned by `hyperliquid positions`, `hyperliquid prices`, and exchange
 ---
 
 ## Changelog
+
+### v0.3.2 (2026-04-13)
+
+- **fix**: `order` — balance pre-flight: queries Perp + Spot + Arbitrum USDC in parallel before every order; stops early with fund landscape + deposit/transfer tip if perp balance is insufficient
+- **fix**: `order` — size precision: auto-rounds `--size` to `szDecimals`; auto-bumps by one lot if notional < $10 to meet exchange minimum
+- **fix**: `order` / `tpsl` — SL/TP price precision: trigger and worst-fill limit prices now use `round_px` (szDecimals significant figures) instead of raw `format_px`; eliminates "Price must be divisible by tick size" rejections
+- **fix**: `address` — HyperEVM hidden by default (USDC contract placeholder); Arbitrum is now the default display; use `--hyp-evm` to opt in
 
 ### v0.3.1 (2026-04-12)
 

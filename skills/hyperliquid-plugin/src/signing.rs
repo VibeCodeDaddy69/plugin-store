@@ -60,13 +60,14 @@ pub fn market_slippage_px(mid_px: f64, is_buy: bool, sz_decimals: u32) -> String
 /// Slippage-protected limit price for market trigger orders.
 /// When a trigger fires as "market", HL still needs a worst-acceptable-price.
 /// Convention: 10% slippage tolerance (same as HL web UI default).
-fn trigger_limit_px(trigger_px: f64, is_buy: bool) -> String {
+/// Uses round_px so the limit price obeys the same tick-size rules as the trigger price.
+fn trigger_limit_px(trigger_px: f64, is_buy: bool, sz_decimals: u32) -> String {
     let px = if is_buy {
         trigger_px * 1.1
     } else {
         trigger_px * 0.9
     };
-    format_px(px)
+    round_px(px, sz_decimals)
 }
 
 // ─── Entry orders ────────────────────────────────────────────────────────────
@@ -171,6 +172,7 @@ pub fn build_trigger_order_element(
     trigger_px_str: &str,
     is_market: bool,
     limit_px_override: Option<&str>,
+    sz_decimals: u32,
 ) -> Value {
     let is_buy = !position_is_long; // close opposite of entry
 
@@ -178,7 +180,7 @@ pub fn build_trigger_order_element(
         Some(px) => px.to_string(),
         None if is_market => {
             let trigger_px: f64 = trigger_px_str.parse().unwrap_or(0.0);
-            trigger_limit_px(trigger_px, is_buy)
+            trigger_limit_px(trigger_px, is_buy, sz_decimals)
         }
         None => trigger_px_str.to_string(),
     };
@@ -208,17 +210,18 @@ pub fn build_standalone_tpsl_action(
     size_str: &str,
     sl_px: Option<&str>,
     tp_px: Option<&str>,
+    sz_decimals: u32,
 ) -> Value {
     let mut orders = vec![];
 
     if let Some(px) = sl_px {
         orders.push(build_trigger_order_element(
-            asset, position_is_long, size_str, "sl", px, true, None,
+            asset, position_is_long, size_str, "sl", px, true, None, sz_decimals,
         ));
     }
     if let Some(px) = tp_px {
         orders.push(build_trigger_order_element(
-            asset, position_is_long, size_str, "tp", px, true, None,
+            asset, position_is_long, size_str, "tp", px, true, None, sz_decimals,
         ));
     }
 
@@ -239,18 +242,19 @@ pub fn build_bracketed_order_action(
     size_str: &str,
     sl_px: Option<&str>,
     tp_px: Option<&str>,
+    sz_decimals: u32,
 ) -> Value {
     let entry_is_long = position_is_long;
     let mut orders = vec![entry_order];
 
     if let Some(px) = sl_px {
         orders.push(build_trigger_order_element(
-            asset, entry_is_long, size_str, "sl", px, true, None,
+            asset, entry_is_long, size_str, "sl", px, true, None, sz_decimals,
         ));
     }
     if let Some(px) = tp_px {
         orders.push(build_trigger_order_element(
-            asset, entry_is_long, size_str, "tp", px, true, None,
+            asset, entry_is_long, size_str, "tp", px, true, None, sz_decimals,
         ));
     }
 

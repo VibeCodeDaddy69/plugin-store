@@ -6,18 +6,23 @@ use crate::config::{USDC_ARBITRUM, USDC_HYPER_EVM};
 
 #[derive(Args)]
 pub struct AddressArgs {
-    /// Show Arbitrum address instead of HyperEVM
+    /// Also show HyperEVM address (hidden by default — USDC contract TBD)
+    #[arg(long)]
+    pub hyp_evm: bool,
+
+    /// Show Arbitrum address (default behaviour, kept for explicitness)
     #[arg(long)]
     pub arbitrum: bool,
 
-    /// Show both addresses
+    /// Show all addresses (Arbitrum + HyperEVM)
     #[arg(long)]
     pub all: bool,
 }
 
 pub async fn run(args: AddressArgs) -> anyhow::Result<()> {
-    let show_hyp = !args.arbitrum || args.all;
-    let show_arb = args.arbitrum || args.all;
+    // HyperEVM is opt-in: USDC contract is still a placeholder (0x0000…).
+    let show_hyp = args.hyp_evm || args.all;
+    let show_arb = !args.hyp_evm || args.all || args.arbitrum;
 
     if show_hyp {
         let wallet = resolve_wallet(CHAIN_ID)?;

@@ -442,29 +442,7 @@ jobs:
                 if [ "${{ matrix.zigbuild }}" = "true" ]; then
                   if grep -q 'openssl-sys' Cargo.lock 2>/dev/null; then
                     echo "Detected openssl on musl target — patching reqwest to use rustls-tls..."
-                    python3 << 'PATCH_REQWEST'
-import re
-content = open('Cargo.toml').read()
-def patch(m):
-    s = m.group(0)
-    if 'rustls-tls' in s:
-        return s
-    # disable default-features (removes native-tls)
-    if 'default-features' not in s:
-        s = s.rstrip('}') + ', default-features = false}'
-    else:
-        s = re.sub(r'default-features\s*=\s*true', 'default-features = false', s)
-    # add rustls-tls to features list
-    if 'features' in s:
-        s = re.sub(r'features\s*=\s*\[', 'features = ["rustls-tls", ', s)
-    else:
-        s = s.rstrip('}') + ', features = ["rustls-tls"]}'
-    return s
-content = re.sub(r'reqwest\s*=\s*\{[^}]+\}', patch, content)
-# remove vendored openssl dep (no longer needed with rustls)
-content = re.sub(r'\nopenssl\s*=\s*\{[^}]*\}\n?', '\n', content)
-open('Cargo.toml', 'w').write(content)
-PATCH_REQWEST
+                    python3 -c "import re; c=open('Cargo.toml').read(); c=re.sub(r'reqwest\s*=\s*\{[^}]+\}',lambda m:(m.group(0) if 'rustls-tls' in m.group(0) else re.sub(r'features\s*=\s*\[','features = [\"rustls-tls\", ',m.group(0).replace('}',', default-features = false}') if 'default-features' not in m.group(0) else re.sub(r'default-features\s*=\s*true','default-features = false',m.group(0)))),c); c=re.sub(r'\nopenssl\s*=\s*\{[^}]*\}\n?','\n',c); open('Cargo.toml','w').write(c)"
                     cargo generate-lockfile 2>/dev/null || true
                   fi
                   cargo zigbuild --release --target ${{ matrix.target }}

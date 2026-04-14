@@ -170,9 +170,9 @@ pip install httpx base58 solders
 │  STEP 2: SOCIAL LINKS (Optional)                                     │
 │                                                                      │
 │  ┌──────────────┬───────────────────────────────────────────────┐    │
-│  │ Website      │  https://example.com           [Optional]   │    │
-│  │ Twitter / X  │  https://x.com/example         [Optional]   │    │
-│  │ Telegram     │  https://t.me/example          [Optional]   │    │
+│  │ Website      │  <your-website-url>           [Optional]   │    │
+│  │ Twitter / X  │  <your-twitter-url>         [Optional]   │    │
+│  │ Telegram     │  <your-telegram-url>          [Optional]   │    │
 │  └──────────────┴───────────────────────────────────────────────┘    │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
@@ -264,9 +264,9 @@ pip install httpx base58 solders
 │  │ Ticker         │ WIF                                          │   │
 │  │ Description    │ The dog with the hat                         │   │
 │  │ Image          │ wif.png (420x420, 85KB)                      │   │
-│  │ Website        │ https://example.com                        │   │
-│  │ Twitter        │ https://x.com/example                      │   │
-│  │ Telegram       │ https://t.me/example                       │   │
+│  │ Website        │ <your-website-url>                        │   │
+│  │ Twitter        │ <your-twitter-url>                      │   │
+│  │ Telegram       │ <your-telegram-url>                       │   │
 │  │ ─────────────  │ ──────────────────────────                   │   │
 │  │ Wallet         │ 2HNq...ErwW (1.23 SOL)                      │   │
 │  │ Initial Buy    │ 0.5 SOL                                      │   │
@@ -294,9 +294,9 @@ pip install httpx base58 solders
 │        "symbol": "WIF",                                              │
 │        "description": "The dog with the hat",                        │
 │        "image": "ipfs://QmXxx...",                                   │
-│        "twitter": "https://x.com/example",                        │
-│        "telegram": "https://t.me/example",                        │
-│        "website": "https://example.com"                            │
+│        "twitter": "<your-twitter-url>",                        │
+│        "telegram": "<your-telegram-url>",                        │
+│        "website": "<your-website-url>"                            │
 │      }                                                               │
 │      → ipfs://QmYyy... (metadata URI)                               │
 │                                                                      │
@@ -447,7 +447,7 @@ result = await quick_launch("MoonDog", "MDOG", "a good boy", "/path/to/dog.png")
 
 # Full options:
 result = await quick_launch(
-    "MoonDog", "MDOG", "a good boy", "https://example.com/dog.png",
+    "MoonDog", "MDOG", "a good boy", "<your-website-url>/dog.png",
     launchpad="pumpfun",   # pumpfun | bags | letsbonk | moonit | fourmeme | flap
     buy_amount=0.1,        # SOL/BNB — 0 = create only
     website="https://moondog.xyz",
@@ -460,7 +460,7 @@ result = await quick_launch(
 
 **Image input** — accepts any of:
 - Local file path: `"/tmp/dog.png"`
-- URL: `"https://example.com/dog.png"`
+- URL: `"<your-website-url>/dog.png"`
 - Base64 data URI: `"data:image/png;base64,iVBOR…"`
 - Raw base64 string
 

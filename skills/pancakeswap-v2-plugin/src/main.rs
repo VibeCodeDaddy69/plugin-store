@@ -28,6 +28,10 @@ struct Cli {
     #[arg(long)]
     dry_run: bool,
 
+    /// Confirm and broadcast the transaction (without this flag, write commands print a preview only)
+    #[arg(long)]
+    confirm: bool,
+
     /// Override RPC endpoint
     #[arg(long)]
     rpc_url: Option<String>,
@@ -158,6 +162,7 @@ async fn main() {
                 from: cli.from,
                 rpc_url: cli.rpc_url,
                 dry_run: cli.dry_run,
+                confirm: cli.confirm,
             })
             .await
         }
@@ -174,6 +179,7 @@ async fn main() {
                 from: cli.from,
                 rpc_url: cli.rpc_url,
                 dry_run: cli.dry_run,
+                confirm: cli.confirm,
             })
             .await
         }
@@ -189,6 +195,7 @@ async fn main() {
                 from: cli.from,
                 rpc_url: cli.rpc_url,
                 dry_run: cli.dry_run,
+                confirm: cli.confirm,
             })
             .await
         }

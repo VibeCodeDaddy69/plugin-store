@@ -18,6 +18,7 @@ pub struct SwapArgs {
     pub from: Option<String>,
     pub rpc_url: Option<String>,
     pub dry_run: bool,
+    pub confirm: bool,
 }
 
 pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
@@ -102,6 +103,7 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
             args.from.as_deref(),
             Some(amount_in),
             args.dry_run,
+            args.confirm,
         )
         .await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
@@ -125,13 +127,14 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
                 amount_in,
                 args.from.as_deref(),
                 args.dry_run,
+                args.confirm,
             )
             .await?;
             steps.push(json!({
                 "step": "approve",
                 "txHash": onchainos::extract_tx_hash(&approve_result)
             }));
-            if !args.dry_run {
+            if !args.dry_run && args.confirm {
                 sleep(Duration::from_secs(3)).await;
             }
         }
@@ -150,10 +153,11 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
             args.from.as_deref(),
             None,
             args.dry_run,
+            args.confirm,
         )
         .await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
-        if !args.dry_run {
+        if !args.dry_run && args.confirm {
             onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
         }
         steps.push(json!({
@@ -173,13 +177,14 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
                 amount_in,
                 args.from.as_deref(),
                 args.dry_run,
+                args.confirm,
             )
             .await?;
             steps.push(json!({
                 "step": "approve",
                 "txHash": onchainos::extract_tx_hash(&approve_result)
             }));
-            if !args.dry_run {
+            if !args.dry_run && args.confirm {
                 sleep(Duration::from_secs(3)).await;
             }
         }
@@ -198,10 +203,11 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
             args.from.as_deref(),
             None,
             args.dry_run,
+            args.confirm,
         )
         .await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
-        if !args.dry_run {
+        if !args.dry_run && args.confirm {
             onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
         }
         steps.push(json!({

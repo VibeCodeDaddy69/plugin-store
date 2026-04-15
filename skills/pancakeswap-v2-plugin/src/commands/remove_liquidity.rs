@@ -17,6 +17,7 @@ pub struct RemoveLiquidityArgs {
     pub from: Option<String>,
     pub rpc_url: Option<String>,
     pub dry_run: bool,
+    pub confirm: bool,
 }
 
 pub async fn run(args: RemoveLiquidityArgs) -> Result<serde_json::Value> {
@@ -111,10 +112,10 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<serde_json::Value> {
     if lp_allowance < liquidity {
         let r = erc20_approve(
             args.chain_id, &pair_addr, cfg.router02, liquidity,
-            args.from.as_deref(), args.dry_run,
+            args.from.as_deref(), args.dry_run, args.confirm,
         ).await?;
         steps.push(json!({"step":"approve_lp","txHash": onchainos::extract_tx_hash(&r)}));
-        if !args.dry_run { sleep(Duration::from_secs(5)).await; }
+        if !args.dry_run && args.confirm { sleep(Duration::from_secs(5)).await; }
     }
 
     if native_a || native_b {
@@ -129,10 +130,10 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<serde_json::Value> {
         );
         let result = onchainos::wallet_contract_call(
             args.chain_id, cfg.router02, &calldata,
-            args.from.as_deref(), None, args.dry_run,
+            args.from.as_deref(), None, args.dry_run, args.confirm,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
-        if !args.dry_run {
+        if !args.dry_run && args.confirm {
             onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
         }
         steps.push(json!({
@@ -149,10 +150,10 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<serde_json::Value> {
         );
         let result = onchainos::wallet_contract_call(
             args.chain_id, cfg.router02, &calldata,
-            args.from.as_deref(), None, args.dry_run,
+            args.from.as_deref(), None, args.dry_run, args.confirm,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
-        if !args.dry_run {
+        if !args.dry_run && args.confirm {
             onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
         }
         steps.push(json!({

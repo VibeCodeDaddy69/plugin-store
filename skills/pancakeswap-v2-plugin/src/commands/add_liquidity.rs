@@ -77,6 +77,7 @@ pub struct AddLiquidityArgs {
     pub from: Option<String>,
     pub rpc_url: Option<String>,
     pub dry_run: bool,
+    pub confirm: bool,
 }
 
 pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
@@ -145,19 +146,19 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         if allowance < token_amount {
             let r = erc20_approve(
                 args.chain_id, &token_addr, cfg.router02, token_amount,
-                args.from.as_deref(), args.dry_run,
+                args.from.as_deref(), args.dry_run, args.confirm,
             ).await?;
             steps.push(json!({"step":"approve_token","txHash": onchainos::extract_tx_hash(&r)}));
-            if !args.dry_run { sleep(Duration::from_secs(5)).await; }
+            if !args.dry_run && args.confirm { sleep(Duration::from_secs(5)).await; }
         }
 
         let calldata = build_add_liquidity_eth(&token_addr, token_amount, token_min, eth_min, &wallet, deadline);
         let result = onchainos::wallet_contract_call(
             args.chain_id, cfg.router02, &calldata,
-            args.from.as_deref(), Some(eth_amount), args.dry_run,
+            args.from.as_deref(), Some(eth_amount), args.dry_run, args.confirm,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
-        if !args.dry_run {
+        if !args.dry_run && args.confirm {
             onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
         }
         steps.push(json!({
@@ -179,10 +180,10 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         if allow_a < amount_a {
             let r = erc20_approve(
                 args.chain_id, &token_a_addr, cfg.router02, amount_a,
-                args.from.as_deref(), args.dry_run,
+                args.from.as_deref(), args.dry_run, args.confirm,
             ).await?;
             steps.push(json!({"step":"approve_tokenA","txHash": onchainos::extract_tx_hash(&r)}));
-            if !args.dry_run { sleep(Duration::from_secs(5)).await; }
+            if !args.dry_run && args.confirm { sleep(Duration::from_secs(5)).await; }
         }
 
         // Approve tokenB if needed
@@ -190,10 +191,10 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         if allow_b < amount_b {
             let r = erc20_approve(
                 args.chain_id, &token_b_addr, cfg.router02, amount_b,
-                args.from.as_deref(), args.dry_run,
+                args.from.as_deref(), args.dry_run, args.confirm,
             ).await?;
             steps.push(json!({"step":"approve_tokenB","txHash": onchainos::extract_tx_hash(&r)}));
-            if !args.dry_run { sleep(Duration::from_secs(5)).await; }
+            if !args.dry_run && args.confirm { sleep(Duration::from_secs(5)).await; }
         }
 
         let calldata = build_add_liquidity(
@@ -204,10 +205,10 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         );
         let result = onchainos::wallet_contract_call(
             args.chain_id, cfg.router02, &calldata,
-            args.from.as_deref(), None, args.dry_run,
+            args.from.as_deref(), None, args.dry_run, args.confirm,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
-        if !args.dry_run {
+        if !args.dry_run && args.confirm {
             onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
         }
         steps.push(json!({

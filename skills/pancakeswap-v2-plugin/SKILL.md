@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v2-plugin
 description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
-version: "0.2.5"
+version: "0.2.4"
 author: "skylavis-sky"
 tags:
   - dex
@@ -29,7 +29,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-v2-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.5"
+LOCAL_VER="0.2.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then

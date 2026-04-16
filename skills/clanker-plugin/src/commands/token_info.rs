@@ -18,12 +18,21 @@ pub fn run(chain_id: u64, token_address: &str) -> Result<()> {
         serde_json::json!(null)
     };
 
+    let info_value = {
+        let d = &info["data"];
+        if let Some(arr) = d.as_array() {
+            arr.first().cloned().unwrap_or(serde_json::Value::Null)
+        } else {
+            d.clone()
+        }
+    };
+
     let output = serde_json::json!({
         "ok": true,
         "data": {
             "token_address": token_address,
             "chain_id": chain_id,
-            "info": info["data"],
+            "info": info_value,
             "price": price_field,
             "price_available": price_available,
             "price_note": if price_available {

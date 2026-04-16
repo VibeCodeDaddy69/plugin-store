@@ -138,6 +138,13 @@ pub async fn run(
         bail!("--symbol cannot be empty");
     }
 
+    if chain_id != 8453 {
+        bail!(
+            "Direct on-chain deployment is only supported on Base (chain 8453). \
+             Arbitrum support is planned for a future release."
+        );
+    }
+
     // Preview gate: show intent without broadcasting when neither --dry-run nor --confirm
     if !dry_run && !confirm {
         let wallet_preview = from
@@ -163,13 +170,6 @@ pub async fn run(
         });
         println!("{}", serde_json::to_string_pretty(&preview)?);
         return Ok(());
-    }
-
-    if chain_id != 8453 {
-        bail!(
-            "Direct on-chain deployment is only supported on Base (chain 8453). \
-             Arbitrum support is planned for a future release."
-        );
     }
 
     // ── 1. Resolve wallet ─────────────────────────────────────────────────

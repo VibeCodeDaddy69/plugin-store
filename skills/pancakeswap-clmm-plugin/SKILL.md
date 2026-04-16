@@ -182,7 +182,17 @@ The output includes a `staked_discovery` field:
 - `"auto"` — staked positions were discovered via Transfer log scan
 - `"manual"` — user supplied `--include-staked <tokenId1,tokenId2>` explicitly
 
-If the RPC node does not support `eth_getLogs` with a large block range, auto-discovery falls back gracefully and reports a `staked_discovery_note` explaining the limitation. In that case, use `--include-staked` to specify token IDs manually.
+If the RPC node does not support `eth_getLogs` with a large block range, the plugin falls back to a chunked scan of the most recent available blocks (newest-first, stopping at pruned history). It reports the block coverage in `staked_discovery_note`.
+
+**For full historical discovery** (positions staked weeks or months ago), use an archive-capable RPC:
+```bash
+pancakeswap-clmm --chain 56 --rpc-url https://rpc.ankr.com/bsc positions
+pancakeswap-clmm --chain 56 --rpc-url https://<your-quicknode-or-alchemy-endpoint> positions
+```
+Or specify token IDs directly if you know them:
+```bash
+pancakeswap-clmm --chain 56 positions --include-staked 12345,67890
+```
 
 ## Commands
 

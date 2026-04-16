@@ -149,18 +149,21 @@ When a user signals they are **new or just installed** this plugin — e.g. "I j
 Proactively walk them through the Quickstart in order, one step at a time, waiting for confirmation
 before proceeding to the next:
 
-1. **Check wallet** — run `onchainos wallet addresses --chain 56`. If no address, direct them to
+1. **Choose chain** — ask the user which chain they want to use. Supported: BSC (56), Base (8453),
+   Arbitrum (42161). Use their answer for `<CHAIN>` in all subsequent steps. If unsure, suggest BSC
+   (deepest PancakeSwap V2 liquidity) or Base (lower gas fees).
+2. **Check wallet** — run `onchainos wallet addresses --chain <CHAIN>`. If no address, direct them to
    connect via `onchainos wallet login`. Do not proceed to any write operations until a wallet is confirmed.
-2. **Check balance** — run `onchainos wallet balance --chain 56`. The user needs BNB for gas (~$0.50 worth
-   minimum) plus the tokens they want to swap. If BNB is zero, explain they need it for gas fees and
-   how to acquire it (bridge from another chain or CEX withdrawal).
-3. **Get a quote first** — run `pancakeswap-v2 --chain 56 quote --token-in <TOKEN> --token-out <TOKEN> --amount-in <AMOUNT>`
+3. **Check balance** — run `onchainos wallet balance --chain <CHAIN>`. The user needs the native gas
+   token (BNB on BSC, ETH on Base/Arbitrum) plus the input token. If the gas token balance is zero,
+   explain how to acquire it (bridge, CEX withdrawal).
+4. **Get a quote first** — run `pancakeswap-v2 --chain <CHAIN> quote --token-in <TOKEN> --token-out <TOKEN> --amount-in <AMOUNT>`
    to show the expected output before any on-chain action. Ask the user which tokens they want to swap.
-4. **Preview the swap** — run `pancakeswap-v2 --chain 56 swap ...` (without `--confirm`) to show the
+5. **Preview the swap** — run `pancakeswap-v2 --chain <CHAIN> swap ...` (without `--confirm`) to show the
    preview with route, expected output, and `txHash: "pending"`. This is safe — no broadcast occurs.
    Show the user the preview output and ask them to confirm before proceeding.
-5. **Execute** — once the user confirms, re-run adding the `--confirm` flag to broadcast.
-6. **Verify** — check the BscScan link in the output and run `onchainos wallet balance --chain 56`
+6. **Execute** — once the user confirms, re-run adding the `--confirm` flag to broadcast.
+7. **Verify** — check the explorer link in the output and run `onchainos wallet balance --chain <CHAIN>`
    to confirm balances updated.
 
 Do not dump all steps at once. Guide conversationally — confirm each step before moving on.

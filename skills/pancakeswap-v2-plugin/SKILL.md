@@ -508,6 +508,25 @@ pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT --liqui
 6. Submit `removeLiquidity` or `removeLiquidityETH` via `onchainos wallet contract-call`
 7. Report txHash
 
+**Expected output (key fields):**
+```json
+{
+  "ok": true,
+  "steps": [{ "step": "removeLiquidity", "txHash": "0x..." }],
+  "data": {
+    "pair": "0x...",
+    "lpBurned": "1000000000000000000",
+    "expectedTokenA": "500000000",
+    "expectedTokenB": "499800000",
+    "expectedTokenAHuman": "500.000000",
+    "expectedTokenBHuman": "499.800000",
+    "tokenA": "0x...",
+    "tokenB": "0x...",
+    "chain": 56
+  }
+}
+```
+
 ---
 
 ## get-pair — Look Up Pair Address

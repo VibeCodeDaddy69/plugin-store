@@ -57,6 +57,9 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<serde_json::Value> {
         resolve_token_address(&args.token_b, args.chain_id)
     };
 
+    let decimals_a = rpc::erc20_decimals(&token_a_addr, rpc).await.unwrap_or(18);
+    let decimals_b = rpc::erc20_decimals(&token_b_addr, rpc).await.unwrap_or(18);
+
     // Look up pair
     let pair_addr = rpc::factory_get_pair(cfg.factory, &token_a_addr, &token_b_addr, rpc).await?;
     if pair_addr == "0x0000000000000000000000000000000000000000" {
@@ -172,6 +175,8 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<serde_json::Value> {
             "lpBalance": lp_balance.to_string(),
             "expectedTokenA": amount_a_expected.to_string(),
             "expectedTokenB": amount_b_expected.to_string(),
+            "expectedTokenAHuman": format!("{:.6}", amount_a_expected as f64 / 10f64.powi(decimals_a as i32)),
+            "expectedTokenBHuman": format!("{:.6}", amount_b_expected as f64 / 10f64.powi(decimals_b as i32)),
             "tokenA": token_a_addr,
             "tokenB": token_b_addr,
             "chain": args.chain_id

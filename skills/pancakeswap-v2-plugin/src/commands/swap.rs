@@ -71,6 +71,9 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
     let path_refs: Vec<&str> = path.iter().map(|s| s.as_str()).collect();
     let amounts = rpc::router_get_amounts_out(cfg.router02, amount_in, &path_refs, rpc).await?;
     let amount_out_expected = *amounts.last().unwrap_or(&0);
+    if amount_out_expected == 0 {
+        anyhow::bail!("Swap would yield 0 output tokens — input amount is too small or no liquidity for this pair.");
+    }
     let amount_out_min = amount_out_expected * (10000 - args.slippage_bps) as u128 / 10000;
 
     // Deadline

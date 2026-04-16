@@ -12,7 +12,7 @@ use commands::{
 #[derive(Parser)]
 #[command(name = "pancakeswap-v2", version, about = "PancakeSwap V2 AMM plugin — swap tokens and manage liquidity on BSC/Base")]
 struct Cli {
-    /// Chain ID (56 = BSC default, 8453 = Base)
+    /// Chain ID (56 = BSC default, 8453 = Base, 42161 = Arbitrum)
     #[arg(long, default_value = "56")]
     chain: u64,
 

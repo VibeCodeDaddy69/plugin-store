@@ -241,6 +241,7 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
             "amountA": amount_a.to_string(),
             "amountB": amount_b.to_string(),
             "lpReceived": lp_received,
+            "wallet": wallet,
             "chain": args.chain_id
         }
     }))

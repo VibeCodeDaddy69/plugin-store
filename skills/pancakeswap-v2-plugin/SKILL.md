@@ -421,8 +421,18 @@ pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amou
   "ok": true,
   "steps": [
     {"step": "approve", "txHash": "0xabc..."},
-    {"step": "swapExactTokensForTokens", "txHash": "0xdef...", "explorer": "bscscan.com/tx/0xdef..."}
-  ]
+    {"step": "swapExactTokensForTokens", "txHash": "0xdef...", "explorer": "https://bscscan.com/tx/0xdef..."}
+  ],
+  "data": {
+    "amountIn": "100000",
+    "amountOutExpected": "99823",
+    "amountOutMin": "98825",
+    "tokenIn": "USDC",
+    "tokenOut": "USDT",
+    "path": ["0x8ac7...", "0x55d3..."],
+    "wallet": "0xYourWallet",
+    "chain": 56
+  }
 }
 ```
 

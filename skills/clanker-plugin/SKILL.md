@@ -180,6 +180,136 @@ Do NOT use for: buying/selling Clanker tokens (use a DEX skill), non-Clanker tok
 
 ---
 
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed clanker",
+"how do I get started", "what can I do with this", "how do I deploy a token" — **do not wait for them
+to ask specific questions.** Proactively walk them through the Quickstart in order, one step at a time,
+waiting for confirmation before proceeding to the next:
+
+1. **Check wallet** — run `onchainos wallet addresses --chain 8453`. If no address, direct them to
+   connect via `onchainos wallet login`. Do not proceed to write operations until a wallet is confirmed.
+2. **Check balance** — run `onchainos wallet balance --chain 8453`. Deploying a token requires ETH for
+   gas (very cheap on Base, typically < $0.05). If insufficient, explain how to bridge ETH to Base.
+3. **Explore read-only** — run `clanker --chain 8453 list-tokens --limit 10` to show recent launches.
+   Ask if they want to search by creator or look up a specific token.
+4. **Preview deployment** — run `clanker --chain 8453 --dry-run deploy-token --name X --symbol Y --from <wallet>`
+   so they see deployment parameters (token admin, reward recipient, LP range) before any on-chain action.
+5. **Execute** — once they confirm, re-run with `--confirm` instead of `--dry-run`.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
+
+**Key points for new users:**
+- `deploy-token` without `--confirm` returns an error — use `--dry-run` to preview first
+- `--dry-run` is a **global flag** — it must come before the subcommand: `clanker --dry-run deploy-token ...`
+- The deployed token contract address is found in the Basescan tx receipt, not the CLI output
+- `claim-rewards` requires the user to have previously deployed a Clanker token and accrued LP fees
+
+---
+
+## Quickstart
+
+New to clanker-plugin? Follow these steps to go from zero to your first token deployment on Base.
+
+### Step 1 — Connect your wallet
+
+```bash
+onchainos wallet login your@email.com
+onchainos wallet addresses --chain 8453
+```
+
+### Step 2 — Check your balance
+
+```bash
+onchainos wallet balance --chain 8453
+```
+
+Minimum recommended: ~0.0005 ETH (~$1) for gas on Base. Token deployments on Base cost well under $0.05
+in gas at normal network conditions. If zero, bridge ETH to Base via a CEX withdrawal or bridge.
+
+### Step 3 — Browse recently deployed tokens
+
+```bash
+clanker --chain 8453 list-tokens --limit 10 --sort desc
+```
+
+Returns the 10 most recently deployed Clanker tokens. Each entry includes `contract_address`, `name`,
+`symbol`, `deployed_at`, and `pool_address`. Use `--sort asc` to see the oldest tokens first.
+Note: `--page` pagination is not functional in this version — all calls return the same page of results.
+
+### Step 4 — Search tokens by creator
+
+```bash
+# By Farcaster username:
+clanker search-tokens --query dwr
+
+# By wallet address:
+clanker search-tokens --query 0xYourWalletAddress
+```
+
+Returns all tokens deployed by that creator, with `trust_status` fields indicating whether the token
+is from a verified/trusted deployer. Use `--trusted-only` to filter to trusted creators only.
+
+### Step 5 — Look up a specific token
+
+```bash
+clanker --chain 8453 token-info --address 0xTokenAddress
+```
+
+Returns token metadata (`tokenName`, `tokenSymbol`, `decimal`) and price data if available. When a
+token has no oracle price yet, `price_available: false` and a `price_note` explain why — this is
+normal for newly deployed tokens.
+
+### Step 6 — Preview a token deployment (safe — no tx sent)
+
+All write commands require `--dry-run` for preview or `--confirm` to execute. Without either flag,
+the command returns an error explaining what to do next.
+
+```bash
+# Preview (safe — no tx sent):
+clanker --chain 8453 --dry-run deploy-token \
+  --name "MyToken" \
+  --symbol "MTK" \
+  --from 0xYourWalletAddress
+```
+
+Expected output: `"dry_run": true`, shows `token_admin`, `reward_recipient`, `factory`, LP range,
+and hook config. Verify your wallet address appears as `token_admin` and `reward_recipient`.
+
+### Step 7 — Deploy your token
+
+```bash
+# Execute (add --confirm; remove --dry-run):
+clanker --chain 8453 deploy-token \
+  --name "MyToken" \
+  --symbol "MTK" \
+  --from 0xYourWalletAddress \
+  --confirm
+```
+
+Expected output: `"ok": true`, `"tx_hash": "0x..."`, `"explorer_url": "https://basescan.org/tx/0x..."`.
+The deployed contract address is NOT in the CLI output — find it in the Basescan tx receipt under
+"Internal Transactions" or the factory event logs. Wait ~30 seconds then run `token-info` to confirm.
+
+### Step 8 — Claim LP rewards (if you have a deployed token)
+
+```bash
+# Preview:
+clanker --chain 8453 --dry-run claim-rewards \
+  --token-address 0xYourDeployedTokenAddress \
+  --from 0xYourWalletAddress
+
+# Execute:
+clanker --chain 8453 claim-rewards \
+  --token-address 0xYourDeployedTokenAddress \
+  --from 0xYourWalletAddress \
+  --confirm
+```
+
+If no rewards have accrued yet, returns `"status": "no_rewards"` — this is normal for new tokens.
+
+---
+
 ## Commands
 
 ### list-tokens — List recently deployed tokens
@@ -345,17 +475,17 @@ clanker [--chain 8453] [--dry-run] deploy-token \
 
 **Example:**
 ```bash
-# Preview without wallet (uses zero address as placeholder)
-clanker --dry-run deploy-token --name "SkyDog" --symbol "SKYDOG"
+# Preview (no --confirm, no --dry-run) — shows intent, exits 0:
+clanker deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
 
-# Preview with your wallet (shows the deployer address in the preview output)
+# Full calldata preview (--dry-run, requires --from):
 clanker --dry-run deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
 
-# Deploy (after user confirmation)
-clanker deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
+# Deploy (after user confirmation):
+clanker --confirm deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
 ```
 
-> **Note on `--from` in dry-run:** Passing `--from <wallet_address>` to `--dry-run` affects the preview output — the deployer address shown in the response will be your wallet address instead of a placeholder. This is useful to verify the token admin / fee recipient is set correctly before deploying.
+> **Note:** `--from` is required for all three modes (preview, dry-run, and deploy). The plugin cannot resolve the active onchainos wallet automatically for token deployments. `--dry-run` must be a **global flag** before the subcommand.
 
 **Expected output:**
 <external-content>

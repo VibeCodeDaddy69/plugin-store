@@ -131,12 +131,28 @@ pub async fn run(
     dry_run: bool,
     confirm: bool,
 ) -> Result<()> {
-    // Require explicit --confirm for live deployments
+    // Preview gate: show intent without broadcasting when neither --dry-run nor --confirm
     if !dry_run && !confirm {
-        bail!(
-            "Deployment requires explicit confirmation. Run with --dry-run first to preview, \
-             then re-run with --confirm to execute."
-        );
+        let wallet_preview = from
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| onchainos::resolve_wallet(chain_id).unwrap_or_default());
+        if wallet_preview.is_empty() {
+            bail!("Cannot determine wallet address — pass --from or ensure onchainos is logged in");
+        }
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Add --dry-run to see full calldata, or --confirm to deploy on-chain",
+            "data": {
+                "chain": chain_id,
+                "name": name,
+                "symbol": symbol,
+                "deployer": wallet_preview,
+                "note": "Token admin and LP reward recipient will be set to deployer address"
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
     }
 
     if chain_id != 8453 {

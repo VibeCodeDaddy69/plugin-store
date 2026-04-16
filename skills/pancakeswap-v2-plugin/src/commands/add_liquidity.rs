@@ -96,7 +96,7 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         f.clone()
     } else if args.dry_run {
         // Use a recognisable placeholder so dry-run output is clearly non-live
-        "0xDRYRUN00000000000000000000000000000000000".to_string()
+        "0xDRYRUN0000000000000000000000000000000000".to_string()
     } else {
         let w = onchainos::resolve_wallet(args.chain_id).unwrap_or_default();
         if w.is_empty() {

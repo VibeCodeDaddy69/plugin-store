@@ -577,7 +577,7 @@
     },
     {
       "name": "pancakeswap-v3",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
       "author": {
         "name": "GeoGu360"

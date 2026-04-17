@@ -42,12 +42,9 @@ pub async fn run(
         return Ok(());
     }
 
-    // Resolve recipient address
-    let recipient = match to {
-        Some(addr) => addr,
-        None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
-    };
-    if recipient.is_empty() {
+    // Resolve signer wallet (always the active onchainos account — the NFT staker)
+    let wallet = onchainos::resolve_wallet(chain_id).await.unwrap_or_default();
+    if wallet.is_empty() {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
             "ok": false,
             "error": "Cannot resolve wallet address. Ensure onchainos is logged in.",
@@ -55,9 +52,20 @@ pub async fn run(
         }))?);
         return Ok(());
     }
+    // Recipient (destination for withdrawn NFT) defaults to signer wallet
+    let recipient = to.unwrap_or_else(|| wallet.clone());
 
-    // Pre-check: verify token is staked in MasterChefV3
-    let owner = rpc::owner_of(cfg.nonfungible_position_manager, token_id, &rpc).await?;
+    // Pre-check: verify token exists and is staked in MasterChefV3
+    let owner = match rpc::owner_of(cfg.nonfungible_position_manager, token_id, &rpc).await {
+        Ok(o) => o,
+        Err(_) => {
+            println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "error": format!("Token ID {} does not exist on chain {}.", token_id, chain_id),
+            }))?);
+            return Ok(());
+        }
+    };
     if owner.to_lowercase() != cfg.masterchef_v3.to_lowercase() {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
             "ok": false,
@@ -105,7 +113,7 @@ pub async fn run(
         chain_id,
         cfg.masterchef_v3,
         &calldata,
-        Some(&recipient),
+        Some(&wallet),  // signer = NFT staker wallet, not recipient
         None,
         false,
     )

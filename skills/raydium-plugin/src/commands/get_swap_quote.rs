@@ -88,6 +88,20 @@ pub async fn execute(args: &GetSwapQuoteArgs) -> Result<()> {
         .json()
         .await?;
 
+    // Surface API errors as structured JSON with exit 1
+    if resp.get("success").and_then(|v| v.as_bool()) == Some(false) {
+        let msg = resp["msg"].as_str().unwrap_or("Raydium API error");
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "error": msg,
+                "raw": resp
+            }))?
+        );
+        std::process::exit(1);
+    }
+
     println!("{}", serde_json::to_string_pretty(&resp)?);
     Ok(())
 }

@@ -244,7 +244,7 @@ curve --chain 1 --confirm swap \
   --wallet 0xYOUR_WALLET
 ```
 
-Expected output: `"ok": true`, `"tx_hash": "0x..."`, `"explorer": "https://etherscan.io/tx/..."`.
+Expected output: `"ok": true`, `"tx_hash": "0x..."`, `"explorer": "<block_explorer_url>"`.
 
 **Note:** ERC-20 swaps (USDC, DAI, USDT) fire an approve tx first. You will see:
 `Approving USDC for Curve pool...` followed by `Approve tx: 0x... — waiting for confirmation...`

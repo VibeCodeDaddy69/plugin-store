@@ -9,7 +9,7 @@ mod rpc;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "curve", about = "Curve DEX plugin — swap, add/remove liquidity, query pools")]
+#[command(name = "curve", version, about = "Curve DEX plugin — swap, add/remove liquidity, query pools")]
 struct Cli {
     /// Chain ID (1=Ethereum, 42161=Arbitrum, 8453=Base, 137=Polygon, 56=BSC)
     #[arg(long, default_value = "1")]
@@ -18,6 +18,10 @@ struct Cli {
     /// Simulate without broadcasting on-chain transactions
     #[arg(long)]
     dry_run: bool,
+
+    /// Execute write operations on-chain (swap, add-liquidity, remove-liquidity). Without this flag write operations show a preview and exit. Has no effect on read-only commands.
+    #[arg(long)]
+    confirm: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -139,6 +143,17 @@ enum Commands {
 async fn main() {
     let cli = Cli::parse();
     let chain_id = cli.chain;
+    const SUPPORTED_CHAINS: &[u64] = &[1, 42161, 8453, 137, 56];
+    if !SUPPORTED_CHAINS.contains(&chain_id) {
+        eprintln!(
+            "{}",
+            serde_json::json!({"ok": false, "error": format!(
+                "Chain {} is not supported. Supported chains: 1 (Ethereum), 42161 (Arbitrum), 8453 (Base), 137 (Polygon), 56 (BSC)",
+                chain_id
+            )})
+        );
+        std::process::exit(1);
+    }
     let dry_run = cli.dry_run;
 
     let result = match cli.command {
@@ -166,7 +181,7 @@ async fn main() {
             slippage,
             wallet,
         } => {
-            commands::swap::run(chain_id, token_in, token_out, amount, slippage, wallet, dry_run)
+            commands::swap::run(chain_id, token_in, token_out, amount, slippage, wallet, dry_run, cli.confirm)
                 .await
         }
         Commands::AddLiquidity {
@@ -179,7 +194,7 @@ async fn main() {
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect();
-            commands::add_liquidity::run(chain_id, pool, amount_strs, min_mint, wallet, dry_run)
+            commands::add_liquidity::run(chain_id, pool, amount_strs, min_mint, wallet, dry_run, cli.confirm)
                 .await
         }
         Commands::RemoveLiquidity {
@@ -201,6 +216,7 @@ async fn main() {
                 min_amount_strs,
                 wallet,
                 dry_run,
+                cli.confirm,
             )
             .await
         }

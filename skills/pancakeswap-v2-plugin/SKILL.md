@@ -422,7 +422,7 @@ pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amou
   "ok": true,
   "steps": [
     {"step": "approve", "txHash": "0xabc..."},
-    {"step": "swapExactTokensForTokens", "txHash": "0xdef...", "explorer": "https://bscscan.com/tx/<txhash>"}
+    {"step": "swapExactTokensForTokens", "txHash": "0xdef...", "explorer": "<block_explorer_url>"}
   ],
   "data": {
     "tokenIn": "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",

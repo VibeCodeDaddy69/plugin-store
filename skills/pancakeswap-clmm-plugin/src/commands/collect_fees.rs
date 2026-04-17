@@ -50,16 +50,23 @@ pub async fn run(
         None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
     };
     if fee_recipient.is_empty() {
-        anyhow::bail!("Cannot resolve wallet address. Pass --recipient or ensure onchainos is logged in.");
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": false,
+            "error": "Cannot resolve wallet address. Pass --recipient or ensure onchainos is logged in.",
+            "action_required": "onchainos wallet login"
+        }))?);
+        return Ok(());
     }
 
     // Pre-check: verify NFT is held in wallet (not staked in MasterChefV3)
     let owner = rpc::owner_of(cfg.nonfungible_position_manager, token_id, &rpc).await?;
     if owner.to_lowercase() == cfg.masterchef_v3.to_lowercase() {
-        anyhow::bail!(
-            "Token ID {} is staked in MasterChefV3. Please run 'unfarm' first to withdraw it before collecting fees.",
-            token_id
-        );
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": false,
+            "error": format!("Token ID {} is staked in MasterChefV3. Run 'unfarm --token-id {}' first to withdraw it.", token_id, token_id),
+            "action_required": format!("pancakeswap-clmm-plugin unfarm --token-id {}", token_id)
+        }))?);
+        return Ok(());
     }
 
     // Check accrued fees

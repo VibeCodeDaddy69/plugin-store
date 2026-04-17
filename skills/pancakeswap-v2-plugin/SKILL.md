@@ -239,7 +239,7 @@ pancakeswap-v2 --chain 56 --confirm swap \
 ```
 
 Expected output: `"ok": true`, with `steps[].txHash` showing the approve and swap tx hashes, plus
-a BscScan explorer link (e.g. `https://bscscan.com/tx/0x...`).
+a BscScan explorer link for each swap transaction.
 
 For BNB-in or BNB-out swaps, use `--token-in BNB` or `--token-out BNB`.
 
@@ -422,7 +422,7 @@ pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amou
   "ok": true,
   "steps": [
     {"step": "approve", "txHash": "0xabc..."},
-    {"step": "swapExactTokensForTokens", "txHash": "0xdef...", "explorer": "https://bscscan.com/tx/0xdef..."}
+    {"step": "swapExactTokensForTokens", "txHash": "0xdef...", "explorer": "https://bscscan.com/tx/<txhash>"}
   ],
   "data": {
     "tokenIn": "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",

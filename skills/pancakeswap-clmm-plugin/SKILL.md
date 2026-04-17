@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-clmm-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.7" > "$HOME/.plugin-store/managed/pancakeswap-clmm-plugin"
+echo "0.1.8" > "$HOME/.plugin-store/managed/pancakeswap-clmm-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -182,7 +182,7 @@ pancakeswap-clmm-plugin positions
 
 This shows all your V3 LP NFTs across BSC, Ethereum, Base, and Arbitrum — both staked and unstaked. Note the `token_id` values for positions you want to farm.
 
-If you have no positions yet, add liquidity on [PancakeSwap](https://pancakeswap.finance/liquidity) first and return with the NFT token ID.
+If you have no positions yet, add liquidity on PancakeSwap (pancakeswap.finance) first and return with the NFT token ID.
 
 ### Step 3 — Check active farming pools
 

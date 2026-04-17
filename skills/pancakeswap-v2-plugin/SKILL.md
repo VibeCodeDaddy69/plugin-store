@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v2-plugin
 description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
-version: "0.2.4"
+version: "0.2.5"
 author: "skylavis-sky"
 tags:
   - dex
@@ -29,7 +29,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-v2-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.4"
+LOCAL_VER="0.2.5"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -102,7 +102,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2-plugin@0.2.4/pancakeswap-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v2-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2-plugin@0.2.5/pancakeswap-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v2-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-v2-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -111,7 +111,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-v2
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.4" > "$HOME/.plugin-store/managed/pancakeswap-v2-plugin"
+echo "0.2.5" > "$HOME/.plugin-store/managed/pancakeswap-v2-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -131,7 +131,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-v2-plugin","version":"0.2.4"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v2-plugin","version":"0.2.5"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -145,139 +145,48 @@ fi
 
 ## Proactive Onboarding
 
-When a user signals they are **new or just installed** this plugin — e.g. "I just installed pancakeswap-v2",
-"how do I get started", "what can I do with PancakeSwap" — **do not wait for them to ask specific questions.**
-Proactively walk them through the Quickstart in order, one step at a time, waiting for confirmation
-before proceeding to the next:
-
-1. **Choose chain** — ask the user which chain they want to use. Supported: BSC (56), Base (8453),
-   Arbitrum (42161). Use their answer for `<CHAIN>` in all subsequent steps. If unsure, suggest BSC
-   (deepest PancakeSwap V2 liquidity) or Base (lower gas fees).
-2. **Check wallet** — run `onchainos wallet addresses --chain <CHAIN>`. If no address, direct them to
-   connect via `onchainos wallet login`. Do not proceed to any write operations until a wallet is confirmed.
-3. **Check balance** — run `onchainos wallet balance --chain <CHAIN>`. The user needs the native gas
-   token (BNB on BSC, ETH on Base/Arbitrum) plus the input token. If the gas token balance is zero,
-   explain how to acquire it (bridge, CEX withdrawal).
-4. **Get a quote first** — run `pancakeswap-v2 --chain <CHAIN> quote --token-in <TOKEN> --token-out <TOKEN> --amount-in <AMOUNT>`
-   to show the expected output before any on-chain action. Ask the user which tokens they want to swap.
-5. **Preview the swap** — run `pancakeswap-v2 --chain <CHAIN> swap ...` (without `--confirm`) to show the
-   preview with route, expected output, and `txHash: "pending"`. This is safe — no broadcast occurs.
-   Show the user the preview output and ask them to confirm before proceeding.
-6. **Execute** — once the user confirms, re-run adding the `--confirm` flag to broadcast.
-7. **Verify** — check the explorer link in the output and run `onchainos wallet balance --chain <CHAIN>`
-   to confirm balances updated.
-
-Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
-
-## Quickstart
-
-New to pancakeswap-v2? Follow these steps to go from zero to your first swap or liquidity add on PancakeSwap V2.
-
-### Step 1 — Connect your wallet
+When a user is new or asks "how do I get started", call `pancakeswap-v2 quickstart` first. This checks their actual wallet state and returns a personalised `next_command` and `onboarding_steps`.
 
 ```bash
-onchainos wallet login your@email.com
-onchainos wallet addresses --chain 56
+pancakeswap-v2 quickstart
 ```
 
-### Step 2 — Check your balance
+Parse the JSON output:
+- `status: "active"` → has existing positions/balance; run relevant view command
+- `status: "ready"` → wallet funded; follow `next_command`
+- `status: "needs_gas"` → has tokens but no gas; ask user to send ETH/BNB
+- `status: "needs_funds"` → has gas but no tokens; show `onboarding_steps`
+- `status: "no_funds"` → wallet empty; show `onboarding_steps`
+
+**Key caveats:**
+- Both `--confirm` and `--dry-run` are global flags and must come before the subcommand name.
+- ERC-20 approvals are submitted before swaps; always confirm the user understands the approval step.
+- Running swap/add-liquidity without `--confirm` shows a safe preview with `txHash: "pending"` — no broadcast occurs.
+
+---
+
+## Quickstart Command
 
 ```bash
-onchainos wallet balance --chain 56
+pancakeswap-v2 quickstart [--chain <ID>]
 ```
 
-You need BNB for gas (minimum ~0.001 BNB, ~$0.50 at current prices). You also need the input token
-you plan to swap. Common tokens on BSC: USDC, USDT, WBNB, CAKE, BUSD.
+Returns a personalised onboarding JSON based on the wallet's actual balances.
 
-### Step 3 — Get a quote (read-only, safe)
+### Output Fields
 
-```bash
-# How many USDT would I get for 1 USDC?
-pancakeswap-v2 --chain 56 quote --token-in USDC --token-out USDT --amount-in 1
+| Field | Description |
+|-------|-------------|
+| `about` | Protocol description |
+| `wallet` | Resolved wallet address |
+| `chain` | Chain name |
+| `assets` | Wallet balances (gas token + key protocol tokens) |
+| `status` | `active` / `ready` / `needs_gas` / `needs_funds` / `no_funds` |
+| `suggestion` | Human-readable state description |
+| `next_command` | The single most useful command to run next |
+| `onboarding_steps` | Ordered steps to follow |
 
-# How many CAKE for 5 USDT?
-pancakeswap-v2 --chain 56 quote --token-in USDT --token-out CAKE --amount-in 5
-```
-
-Check `amountOutHuman` for the human-readable expected output. The fee is always 0.25%.
-
-### Step 4 — Preview before executing
-
-All write commands are safe to run without `--confirm` — they show a preview with route and expected
-amounts, and `txHash: "pending"`. No broadcast occurs until you add `--confirm`.
-
-```bash
-# Preview (safe — no broadcast, txHash shows "pending"):
-pancakeswap-v2 --chain 56 swap --token-in USDC --token-out USDT --amount-in 1
-
-# Execute (add --confirm to broadcast):
-pancakeswap-v2 --chain 56 --confirm swap --token-in USDC --token-out USDT --amount-in 1
-```
-
-For calldata-only dry-run (zero tx hashes, no quote RPC calls), use `--dry-run` as a global flag:
-
-```bash
-pancakeswap-v2 --dry-run --chain 56 swap --token-in USDC --token-out USDT --amount-in 1
-```
-
-Note: both `--confirm` and `--dry-run` are **global flags** and must come before the subcommand name.
-
-### Step 5 — Swap tokens
-
-```bash
-# Preview (no --confirm — safe):
-pancakeswap-v2 --chain 56 swap \
-  --token-in USDC \
-  --token-out USDT \
-  --amount-in 1
-
-# Execute after confirmation (add --confirm):
-pancakeswap-v2 --chain 56 --confirm swap \
-  --token-in USDC \
-  --token-out USDT \
-  --amount-in 1
-```
-
-Expected output: `"ok": true`, with `steps[].txHash` showing the approve and swap tx hashes, plus
-a BscScan explorer link for each swap transaction.
-
-For BNB-in or BNB-out swaps, use `--token-in BNB` or `--token-out BNB`.
-
-### Step 6 — Add liquidity (optional)
-
-```bash
-# Preview (no --confirm — safe):
-pancakeswap-v2 --chain 56 add-liquidity \
-  --token-a USDC \
-  --token-b USDT \
-  --amount-a 0.5 \
-  --amount-b 0.5
-
-# Execute after confirmation (add --confirm):
-pancakeswap-v2 --chain 56 --confirm add-liquidity \
-  --token-a USDC \
-  --token-b USDT \
-  --amount-a 0.5 \
-  --amount-b 0.5
-```
-
-Expected output: `"ok": true`, `"lpReceived"` showing estimated LP tokens minted.
-
-### Step 7 — Check your LP balance and remove liquidity
-
-```bash
-# Check LP balance:
-pancakeswap-v2 --chain 56 lp-balance --token-a USDC --token-b USDT
-
-# Preview remove (no --confirm — safe):
-pancakeswap-v2 --chain 56 remove-liquidity --token-a USDC --token-b USDT
-
-# Execute remove (add --confirm):
-pancakeswap-v2 --chain 56 --confirm remove-liquidity --token-a USDC --token-b USDT
-
-# Remove specific amount:
-pancakeswap-v2 --chain 56 --confirm remove-liquidity --token-a USDC --token-b USDT --liquidity 0.1
-```
+---
 
 ## Do NOT use for
 
@@ -332,6 +241,7 @@ pancakeswap-v2 --dry-run --chain 56 add-liquidity --token-a USDT --token-b BNB -
 
 | User intent | Command |
 |-------------|---------|
+| "I'm new to PancakeSwap / how do I start?" | `pancakeswap-v2 quickstart` |
 | "How much CAKE for 100 USDT?" | `pancakeswap-v2 quote` |
 | "Swap 100 USDT for CAKE on PancakeSwap V2" | `pancakeswap-v2 swap` |
 | "Add liquidity CAKE/BNB on PancakeSwap" | `pancakeswap-v2 add-liquidity` |

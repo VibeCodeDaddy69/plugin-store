@@ -6,7 +6,7 @@ mod rpc;
 
 use clap::{Parser, Subcommand};
 use commands::{
-    quote, swap, add_liquidity, remove_liquidity, get_pair, get_reserves, lp_balance,
+    add_liquidity, get_pair, get_reserves, lp_balance, quickstart, quote, remove_liquidity, swap,
 };
 
 #[derive(Parser)]
@@ -133,6 +133,9 @@ enum Commands {
         #[arg(long)]
         wallet: Option<String>,
     },
+
+    /// Check wallet state and get personalised onboarding steps
+    Quickstart,
 }
 
 #[tokio::main]
@@ -229,6 +232,10 @@ async fn main() {
                 rpc_url: cli.rpc_url,
             })
             .await
+        }
+
+        Commands::Quickstart => {
+            quickstart::run(cli.chain).await
         }
     };
 

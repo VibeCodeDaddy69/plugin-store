@@ -3,7 +3,7 @@
 Buy and sell tokens on pump.fun bonding curves from the CLI — check token info, bonding curve progress, and price quotes before any on-chain action.
 
 **Prerequisites**
-- onchainos agentic wallet connected with a Solana wallet (chain 501)
+- onchainos agentic wallet connected
 - At least 0.05 SOL in your wallet (covers a small buy plus network fees)
 - A pump.fun token mint address — active bonding curve tokens end in `pump`
 

@@ -776,26 +776,37 @@ jobs:
             });
 
 
-      # ── Inject pre-flight dependencies ──
-      - name: Inject pre-flight
+      # ── Clone fork branch, inject pre-flight, push back ──
+      - name: Inject pre-flight and push
         if: steps.build.outputs.skip != 'true'
-        id: preflight
         run: |
-          python3 .github/scripts/inject-preflight.py             "${{ needs.collect.outputs.plugin_name }}"             "${{ needs.collect.outputs.plugin_dir }}"
-          [ -f /tmp/preflight_injected.txt ] && echo "patched=true" >> "$GITHUB_OUTPUT" || echo "patched=false" >> "$GITHUB_OUTPUT"
+          FORK_URL="https://x-access-token:${{ github.token }}@github.com/${{ github.event.pull_request.head.repo.full_name }}.git"
+          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+          PLUGIN_NAME="${{ needs.collect.outputs.plugin_name }}"
+          PLUGIN_DIR="${{ needs.collect.outputs.plugin_dir }}"
 
-      # ── Push all changes to PR ──
-      - name: Push to PR branch
-        if: steps.preflight.outputs.patched == 'true'
-        run: |
-          git config user.name "plugin-store-bot"
-          git config user.email "bot@plugin-store.local"
-          git add "${{ needs.collect.outputs.plugin_dir }}"
-          git diff --staged --quiet && echo "No changes" && exit 0
-          git commit -m "auto: pre-flight for ${{ needs.collect.outputs.plugin_name }}"
-          # Push to the fork repo (not base repo) for fork PRs
-          PUSH_URL="https://x-access-token:${{ github.token }}@github.com/${{ github.event.pull_request.head.repo.full_name }}.git"
-          git push "$PUSH_URL" HEAD:refs/heads/${{ github.event.pull_request.head.ref }}
+          pip install pyyaml 2>/dev/null || pip3 install pyyaml 2>/dev/null || true
+
+          # Clone fork branch so we commit on the correct history
+          git clone --depth=10 --branch "$PR_BRANCH" "$FORK_URL" /tmp/pr-repo
+          cp .github/scripts/inject-preflight.py /tmp/pr-repo/.inject.py
+
+          cd /tmp/pr-repo
+          python3 .inject.py "$PLUGIN_NAME" "$PLUGIN_DIR" || true
+          rm -f .inject.py
+
+          if [ -f /tmp/preflight_injected.txt ]; then
+            git config user.name "plugin-store-bot"
+            git config user.email "bot@plugin-store.local"
+            git add .
+            git diff --staged --quiet && echo "No pre-flight changes" || {
+              git commit -m "auto: pre-flight for $PLUGIN_NAME"
+              git push origin "$PR_BRANCH"
+              echo "Pre-flight pushed to $PR_BRANCH"
+            }
+          else
+            echo "No pre-flight needed"
+          fi
 
       # ── Watchdog — verify report was posted ─────────────
       - name: Watchdog — verify AI review report exists

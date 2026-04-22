@@ -412,6 +412,8 @@ jobs:
 
 
             # Include SUMMARY.md content + character count check
+            echo "DEBUG: Looking for SUMMARY.md in ${PLUGIN_DIR}:"
+            find "${PLUGIN_DIR}" -name "SUMMARY.md" -type f 2>/dev/null || echo "  (none found)"
             SUMMARY_FILE=$(find "${PLUGIN_DIR}" -name "SUMMARY.md" -type f | head -1)
             if [ -n "$SUMMARY_FILE" ] && [ -f "$SUMMARY_FILE" ]; then
               SUMMARY_CHARS=$(wc -c < "$SUMMARY_FILE" | tr -d ' ')

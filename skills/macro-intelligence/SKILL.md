@@ -1,6 +1,6 @@
 ---
 name: macro-intelligence
-version: 1.0.0
+version: 2.0.0
 description: Unified macro intelligence feed — reads 7 sources, classifies events, scores sentiment, generates AI insights, exposes signals via HTTP API
 triggers: macro, news, sentiment, regime, fed, cpi, gold, tariff, whale, signals
 ---

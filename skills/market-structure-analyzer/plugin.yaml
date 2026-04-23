@@ -1,7 +1,7 @@
 schema_version: 1
 name: market-structure-analyzer
-version: "2.1.0"
-description: "Crypto market-structure research agent — 24 indicators across derivatives, options (gamma wall, skew), on-chain (MVRV), exchange flows (Dune), and macro sentiment"
+version: "3.0.0"
+description: "Crypto market-structure research agent — 24+ indicators across derivatives, options (gamma wall, skew), on-chain (MVRV, smart money, DEX hot tokens), and macro sentiment. Live dashboard with K-line charts, TA indicators, and 12-signal composite scoring. Powered by OKX CeFi CLI + OnchainOS + direct HTTP."
 author:
   name: "VibeCodeDaddy"
   github: "VibeCodeDaddy69"
@@ -14,9 +14,10 @@ tags:
   - options
   - on-chain
   - market-structure
-  - dune-analytics
   - gamma-wall
   - mvrv
+  - smart-money
+  - live-dashboard
 
 components:
   skill:
@@ -24,7 +25,6 @@ components:
 
 api_calls:
   - "www.okx.com"
-  - "fapi.binance.com"
   - "community-api.coinmetrics.io"
   - "api.coingecko.com"
   - "api.alternative.me"

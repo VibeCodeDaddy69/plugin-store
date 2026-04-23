@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Market Structure Data Fetcher v2.0 — OKX-first, with Binance fallback.
+"""Market Structure Data Fetcher v3.0 — OKX CeFi CLI + OnchainOS.
 
 Usage:
     python3 fetch_market_data.py BTC          # single token
@@ -7,24 +7,29 @@ Usage:
     python3 fetch_market_data.py --all         # all supported tokens
 
 Outputs JSON to stdout with all available indicators per token.
-Priority: OKX APIs first, Binance as fallback, then CoinGecko/DefiLlama for macro.
+Primary: OKX CeFi CLI (`okx market`) for derivatives + price data.
+Secondary: Direct HTTP for options chain (gamma wall, skew) + external macro.
+External: CoinMetrics (MVRV), alternative.me (F&G), CoinGecko, DefiLlama.
 
-v2.0 changes:
-  - Fixed OKX error response handling (check code != "0")
-  - Fixed taker volume + long/short API params
-  - Added safe float parsing
-  - Added retry logic (1 retry with backoff)
-  - Added: funding rate history (trend), OI delta, realized volatility,
-    cross-exchange OI comparison, liquidation data, options open interest breakdown
+v3.0 changes:
+  - Switched from direct OKX HTTP API to `okx` CLI (okx-cex-market skill)
+  - Removed Binance fallback (single-source: OKX)
+  - Added OI history via `okx market oi-history` with bar-over-bar delta
+  - Long/short ratio via `okx market indicator top-long-short`
+  - Concurrent CLI calls for speed (ThreadPoolExecutor)
+  - Kept direct HTTP for options chain (gamma wall, skew) — too complex for CLI
 """
 from __future__ import annotations
 
 import json
 import math
+import os
+import subprocess
 import sys
 import time
 import urllib.request
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 # ── Config ──────────────────────────────────────────────────────────
@@ -32,50 +37,51 @@ from datetime import datetime, timezone
 TOKEN_MAP = {
     "BTC": {
         "okx_swap": "BTC-USDT-SWAP", "okx_spot": "BTC-USDT", "okx_family": "BTC-USD",
-        "binance": "BTCUSDT", "coingecko": "bitcoin", "tier": 1,
+        "coingecko": "bitcoin", "tier": 1,
     },
     "ETH": {
         "okx_swap": "ETH-USDT-SWAP", "okx_spot": "ETH-USDT", "okx_family": "ETH-USD",
-        "binance": "ETHUSDT", "coingecko": "ethereum", "tier": 1,
+        "coingecko": "ethereum", "tier": 1,
     },
     "SOL": {
         "okx_swap": "SOL-USDT-SWAP", "okx_spot": "SOL-USDT", "okx_family": "SOL-USD",
-        "binance": "SOLUSDT", "coingecko": "solana", "tier": 2,
+        "coingecko": "solana", "tier": 2,
     },
     "BNB": {
         "okx_swap": "BNB-USDT-SWAP", "okx_spot": "BNB-USDT", "okx_family": "",
-        "binance": "BNBUSDT", "coingecko": "binancecoin", "tier": 2,
+        "coingecko": "binancecoin", "tier": 2,
     },
     "DOGE": {
         "okx_swap": "DOGE-USDT-SWAP", "okx_spot": "DOGE-USDT", "okx_family": "",
-        "binance": "DOGEUSDT", "coingecko": "dogecoin", "tier": 2,
+        "coingecko": "dogecoin", "tier": 2,
     },
     "AVAX": {
         "okx_swap": "AVAX-USDT-SWAP", "okx_spot": "AVAX-USDT", "okx_family": "",
-        "binance": "AVAXUSDT", "coingecko": "avalanche-2", "tier": 2,
+        "coingecko": "avalanche-2", "tier": 2,
     },
     "ARB": {
         "okx_swap": "ARB-USDT-SWAP", "okx_spot": "ARB-USDT", "okx_family": "",
-        "binance": "ARBUSDT", "coingecko": "arbitrum", "tier": 2,
+        "coingecko": "arbitrum", "tier": 2,
     },
     "XRP": {
         "okx_swap": "XRP-USDT-SWAP", "okx_spot": "XRP-USDT", "okx_family": "",
-        "binance": "XRPUSDT", "coingecko": "ripple", "tier": 2,
+        "coingecko": "ripple", "tier": 2,
     },
     "LINK": {
         "okx_swap": "LINK-USDT-SWAP", "okx_spot": "LINK-USDT", "okx_family": "",
-        "binance": "LINKUSDT", "coingecko": "chainlink", "tier": 2,
+        "coingecko": "chainlink", "tier": 2,
     },
     "PEPE": {
         "okx_swap": "PEPE-USDT-SWAP", "okx_spot": "PEPE-USDT", "okx_family": "",
-        "binance": "PEPEUSDT", "coingecko": "pepe", "tier": 3,
+        "coingecko": "pepe", "tier": 3,
     },
 }
 
-OKX_BASE = "https://www.okx.com/api/v5"
-BINANCE_FAPI = "https://fapi.binance.com"
-BINANCE_SPOT = "https://api.binance.com/api/v3"
-HEADERS = {"User-Agent": "okx-market-analyzer/2.0", "Accept": "application/json"}
+OKX_BASE = "https://www.okx.com/api/v5"       # kept for options chain (gamma wall, skew)
+HEADERS = {"User-Agent": "okx-market-analyzer/3.0", "Accept": "application/json"}
+
+# OKX CeFi CLI — installed via `npm install -g @okx_ai/okx-trade-cli`
+OKX_CLI = os.environ.get("OKX_CLI_PATH", "/Users/victorlee/.npm-global]/bin/okx")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────
@@ -123,17 +129,39 @@ def okx_data(resp) -> list:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# OKX APIs (PRIMARY)
+# OKX CeFi CLI HELPER
+# ═══════════════════════════════════════════════════════════════════
+
+def okx_cli(args: list[str], timeout: int = 15) -> list | dict | None:
+    """Run `okx <args> --json` and return parsed JSON.
+
+    Returns the parsed JSON on success, None on failure.
+    The CLI returns a JSON array or object directly.
+    """
+    cmd = [OKX_CLI] + args + ["--json"]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout,
+        )
+        if result.returncode != 0:
+            return None
+        return json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
+        return None
+
+
+# ═══════════════════════════════════════════════════════════════════
+# OKX CEFI CLI DATA (PRIMARY)
 # ═══════════════════════════════════════════════════════════════════
 
 def okx_funding(inst_id: str) -> dict:
-    """Current + next funding rate from OKX."""
+    """Current + next funding rate via `okx market funding-rate`."""
     if not inst_id:
         return {"status": "unavailable"}
-    items = okx_data(fetch(f"{OKX_BASE}/public/funding-rate?instId={inst_id}"))
-    if not items:
+    data = okx_cli(["market", "funding-rate", inst_id])
+    if not data or not isinstance(data, list) or not data:
         return {"status": "unavailable"}
-    r = items[0]
+    r = data[0]
     rate = safe_float(r.get("fundingRate"))
     next_rate = safe_float(r.get("nextFundingRate")) if r.get("nextFundingRate") else None
     return {
@@ -144,28 +172,27 @@ def okx_funding(inst_id: str) -> dict:
         "next_rate": next_rate,
         "next_rate_pct": round(next_rate * 100, 6) if next_rate is not None else None,
         "time": r.get("fundingTime", ""),
-        "source": "okx",
+        "source": "okx-cli",
     }
 
 
 def okx_funding_history(inst_id: str, limit: int = 6) -> dict:
-    """Recent funding rate history from OKX (last N periods = 48h at 8h intervals).
+    """Recent funding rate history via `okx market funding-rate --history`.
 
     Returns trend direction and average rate.
     """
     if not inst_id:
         return {"status": "unavailable"}
-    items = okx_data(fetch(f"{OKX_BASE}/public/funding-rate-history?instId={inst_id}&limit={limit}"))
-    if not items:
+    data = okx_cli(["market", "funding-rate", inst_id, "--history", "--limit", str(limit)])
+    if not data or not isinstance(data, list) or not data:
         return {"status": "unavailable"}
-    rates = [safe_float(r.get("fundingRate")) for r in items]
+    rates = [safe_float(r.get("fundingRate")) for r in data if isinstance(r, dict)]
     if not rates:
         return {"status": "unavailable"}
 
     avg = sum(rates) / len(rates)
-    # Trend: compare first half vs second half
     mid = len(rates) // 2
-    recent_avg = sum(rates[:mid]) / max(mid, 1)  # items[0] is most recent
+    recent_avg = sum(rates[:mid]) / max(mid, 1)
     older_avg = sum(rates[mid:]) / max(len(rates) - mid, 1)
     if recent_avg > older_avg * 1.2:
         trend = "increasing"
@@ -176,71 +203,99 @@ def okx_funding_history(inst_id: str, limit: int = 6) -> dict:
 
     return {
         "status": "available",
-        "rates": [round(r * 100, 6) for r in rates],  # as pct
+        "rates": [round(r * 100, 6) for r in rates],
         "avg_rate_pct": round(avg * 100, 6),
         "avg_annualized_pct": round(avg * 3 * 365 * 100, 2),
         "trend": trend,
         "periods": len(rates),
-        "source": "okx",
+        "source": "okx-cli",
     }
 
 
 def okx_open_interest(inst_id: str) -> dict:
-    """Open interest from OKX."""
+    """Open interest via `okx market open-interest`."""
     if not inst_id:
         return {"status": "unavailable"}
-    items = okx_data(fetch(f"{OKX_BASE}/public/open-interest?instType=SWAP&instId={inst_id}"))
-    if not items:
+    data = okx_cli(["market", "open-interest", "--instType", "SWAP", "--instId", inst_id])
+    if not data or not isinstance(data, list) or not data:
         return {"status": "unavailable"}
-    r = items[0]
+    r = data[0]
     return {
         "status": "available",
         "oi": safe_float(r.get("oi")),
         "oi_currency": safe_float(r.get("oiCcy")),
-        "source": "okx",
+        "oi_usd": safe_float(r.get("oiUsd")),
+        "source": "okx-cli",
     }
 
 
-def okx_oi_history(ccy: str) -> dict:
-    """OI + volume history from OKX rubik (24h). Computes OI delta.
+def okx_oi_history(inst_id: str) -> dict:
+    """OI history with bar-over-bar delta via `okx market oi-history`.
 
-    OKX returns data as arrays: [ts, oi, vol] per item.
+    The CLI returns rows with oiCcy, oiUsd, oiDeltaPct per bar.
     """
-    url = f"{OKX_BASE}/rubik/stat/contracts/open-interest-volume?ccy={ccy}&period=1D"
-    items = okx_data(fetch(url))
-    if not items or len(items) < 2:
+    if not inst_id:
+        return {"status": "unavailable"}
+    data = okx_cli(["market", "oi-history", inst_id, "--bar", "1H", "--limit", "24"])
+    if not data or not isinstance(data, list) or not data:
         return {"status": "unavailable"}
 
-    # items can be list-of-lists [ts, oi, vol] or list-of-dicts
-    def extract_oi(item):
-        if isinstance(item, list) and len(item) >= 2:
-            return safe_float(item[1])
-        elif isinstance(item, dict):
-            return safe_float(item.get("oi"))
-        return 0.0
+    # CLI returns [{bar, instId, rows: [{oiCcy, oiCont, oiDeltaPct, oiDeltaUsd, oiUsd, ts}]}]
+    entry = data[0] if data else {}
+    rows = entry.get("rows", [])
+    if not rows:
+        return {"status": "unavailable"}
 
-    latest_oi = extract_oi(items[0])
-    prev_oi = extract_oi(items[1]) if len(items) > 1 else latest_oi
-    day_ago_oi = extract_oi(items[-1])
+    latest = rows[0]
+    latest_oi = safe_float(latest.get("oiCcy"))
+    latest_oi_usd = safe_float(latest.get("oiUsd"))
 
-    oi_delta_1d_pct = ((latest_oi - day_ago_oi) / day_ago_oi * 100) if day_ago_oi > 0 else 0
-    oi_delta_step_pct = ((latest_oi - prev_oi) / prev_oi * 100) if prev_oi > 0 else 0
+    # Sum up delta over 24 bars for 24h aggregate delta
+    deltas = [safe_float(r.get("oiDeltaPct")) for r in rows]
+    oi_delta_1d_pct = sum(deltas) if deltas else 0
+    oi_delta_step_pct = safe_float(latest.get("oiDeltaPct"))
 
     return {
         "status": "available",
         "latest_oi": latest_oi,
+        "latest_oi_usd": latest_oi_usd,
         "oi_delta_1d_pct": round(oi_delta_1d_pct, 2),
         "oi_delta_step_pct": round(oi_delta_step_pct, 2),
-        "data_points": len(items),
-        "source": "okx",
+        "data_points": len(rows),
+        "source": "okx-cli",
     }
 
 
 def okx_ticker(inst_id: str) -> dict:
-    """24h ticker from OKX spot."""
+    """24h ticker via `okx market ticker` CLI."""
     if not inst_id:
         return {"status": "unavailable"}
-    items = okx_data(fetch(f"{OKX_BASE}/market/ticker?instId={inst_id}"))
+    data = okx_cli(["market", "ticker", inst_id])
+    if not data or not isinstance(data, list) or not data:
+        return {"status": "unavailable"}
+    r = data[0]
+    last = safe_float(r.get("last"))
+    open24 = safe_float(r.get("open24h"))
+    change_pct = ((last - open24) / open24 * 100) if open24 > 0 else 0
+    return {
+        "status": "available",
+        "price": last,
+        "open_24h": open24,
+        "high_24h": safe_float(r.get("high24h")),
+        "low_24h": safe_float(r.get("low24h")),
+        "volume_24h_base": safe_float(r.get("vol24h")),
+        "volume_24h_quote": safe_float(r.get("volCcy24h")),
+        "price_change_pct": round(change_pct, 2),
+        "source": "okx-cli",
+    }
+
+
+def okx_ticker_fast(inst_id: str) -> dict:
+    """24h ticker via direct HTTP — 5-8x faster than CLI for high-frequency polling."""
+    if not inst_id:
+        return {"status": "unavailable"}
+    resp = fetch(f"{OKX_BASE}/market/ticker?instId={inst_id}", timeout=5)
+    items = okx_data(resp)
     if not items:
         return {"status": "unavailable"}
     r = items[0]
@@ -260,19 +315,195 @@ def okx_ticker(inst_id: str) -> dict:
     }
 
 
+def okx_funding_fast(inst_id: str) -> dict:
+    """Funding rate via direct HTTP — faster than CLI for concurrent fetching."""
+    if not inst_id:
+        return {"status": "unavailable"}
+    resp = fetch(f"{OKX_BASE}/public/funding-rate?instId={inst_id}", timeout=5)
+    items = okx_data(resp)
+    if not items:
+        return {"status": "unavailable"}
+    r = items[0]
+    rate = safe_float(r.get("fundingRate"))
+    next_rate = safe_float(r.get("nextFundingRate")) if r.get("nextFundingRate") else None
+    return {
+        "status": "available",
+        "rate": rate,
+        "rate_pct": round(rate * 100, 6),
+        "rate_annualized_pct": round(rate * 3 * 365 * 100, 2),
+        "next_rate": next_rate,
+        "next_rate_pct": round(next_rate * 100, 6) if next_rate is not None else None,
+        "time": r.get("fundingTime", ""),
+        "source": "okx",
+    }
+
+
+def okx_oi_fast(inst_id: str) -> dict:
+    """Open interest via direct HTTP — faster than CLI."""
+    if not inst_id:
+        return {"status": "unavailable"}
+    resp = fetch(f"{OKX_BASE}/public/open-interest?instType=SWAP&instId={inst_id}", timeout=5)
+    items = okx_data(resp)
+    if not items:
+        return {"status": "unavailable"}
+    r = items[0]
+    return {
+        "status": "available",
+        "oi": safe_float(r.get("oi")),
+        "oi_currency": safe_float(r.get("oiCcy")),
+        "oi_usd": safe_float(r.get("oiUsd")),
+        "source": "okx",
+    }
+
+
 def okx_candle_history(inst_id: str, bar: str = "1H", limit: int = 24) -> list:
-    """Fetch candle data for volatility calculation. Returns list of close prices."""
+    """Fetch candle data for volatility calculation via `okx market candles`.
+    Returns list of close prices."""
     if not inst_id:
         return []
-    items = okx_data(fetch(f"{OKX_BASE}/market/candles?instId={inst_id}&bar={bar}&limit={limit}"))
-    if not items:
+    data = okx_cli(["market", "candles", inst_id, "--bar", bar, "--limit", str(limit)])
+    if not data or not isinstance(data, list):
         return []
-    # OKX candle: [ts, open, high, low, close, vol, volCcy, volCcyQuote, confirm]
+    # CLI returns same format: [[ts, open, high, low, close, vol, ...], ...]
     closes = []
-    for c in items:
+    for c in data:
         if isinstance(c, list) and len(c) >= 5:
             closes.append(safe_float(c[4]))
     return closes
+
+
+# ═══════════════════════════════════════════════════════════════════
+# OHLCV CANDLES + TA INDICATORS
+# ═══════════════════════════════════════════════════════════════════
+
+def okx_candle_ohlcv(inst_id: str, bar: str = "1H", limit: int = 300) -> list:
+    """Fetch OHLCV candles via `okx market candles`. Returns list of
+    {time, open, high, low, close, volume} sorted oldest-first."""
+    if not inst_id:
+        return []
+    data = okx_cli(["market", "candles", inst_id, "--bar", bar, "--limit", str(limit)], timeout=20)
+    if not data or not isinstance(data, list):
+        return []
+    candles = []
+    for c in data:
+        if isinstance(c, list) and len(c) >= 6:
+            candles.append({
+                "time": int(safe_float(c[0])) // 1000,  # ms → seconds
+                "open": safe_float(c[1]),
+                "high": safe_float(c[2]),
+                "low": safe_float(c[3]),
+                "close": safe_float(c[4]),
+                "volume": safe_float(c[5]),
+            })
+    candles.reverse()  # OKX returns newest-first; we want oldest-first
+    return candles
+
+
+def _ema(values: list, period: int) -> list:
+    """Exponential moving average. Returns list same length as input."""
+    if not values:
+        return []
+    result = [values[0]]
+    k = 2.0 / (period + 1)
+    for i in range(1, len(values)):
+        result.append(values[i] * k + result[-1] * (1 - k))
+    return result
+
+
+def _rsi_series(closes: list, period: int = 14) -> list:
+    """Full RSI series using Wilder's smoothing. Returns list same length as closes."""
+    if len(closes) < 2:
+        return [50.0] * len(closes)
+    deltas = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    gains = [max(d, 0) for d in deltas]
+    losses = [max(-d, 0) for d in deltas]
+
+    result = [50.0]  # pad first value
+    if len(gains) < period:
+        return [50.0] * len(closes)
+
+    # Seed: simple average of first `period` values
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    # Pad initial period with 50
+    result.extend([50.0] * (period - 1))
+    # First RSI
+    rs = avg_gain / avg_loss if avg_loss > 0 else 100.0
+    rsi_val = 100.0 - (100.0 / (1.0 + rs)) if avg_loss > 0 else 100.0
+    result.append(rsi_val)
+
+    # Wilder's smoothing for remaining
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        if avg_loss == 0:
+            result.append(100.0)
+        else:
+            rs = avg_gain / avg_loss
+            result.append(100.0 - (100.0 / (1.0 + rs)))
+    return result
+
+
+def _bb_series(closes: list, period: int = 20, num_std: float = 2.0) -> dict:
+    """Bollinger Bands full series. Returns {upper:[], middle:[], lower:[]}."""
+    n = len(closes)
+    upper, middle, lower = [], [], []
+    for i in range(n):
+        if i < period - 1:
+            upper.append(closes[i])
+            middle.append(closes[i])
+            lower.append(closes[i])
+        else:
+            window = closes[i - period + 1: i + 1]
+            mid = sum(window) / period
+            variance = sum((x - mid) ** 2 for x in window) / period
+            std = variance ** 0.5
+            upper.append(mid + num_std * std)
+            middle.append(mid)
+            lower.append(mid - num_std * std)
+    return {"upper": upper, "middle": middle, "lower": lower}
+
+
+def _macd_series(closes: list, fast: int = 12, slow: int = 26, signal: int = 9) -> dict:
+    """MACD full series. Returns {macd:[], signal:[], histogram:[]}."""
+    ema_fast = _ema(closes, fast)
+    ema_slow = _ema(closes, slow)
+    macd_line = [f - s for f, s in zip(ema_fast, ema_slow)]
+    signal_line = _ema(macd_line, signal)
+    histogram = [m - s for m, s in zip(macd_line, signal_line)]
+    return {"macd": macd_line, "signal": signal_line, "histogram": histogram}
+
+
+def compute_ta_indicators(candles: list, rsi_period: int = 14,
+                          bb_period: int = 20, bb_std: float = 2.0,
+                          macd_fast: int = 12, macd_slow: int = 26,
+                          macd_signal: int = 9) -> dict:
+    """Compute TA indicators from candles. Returns chart-ready dicts with {time,value} pairs."""
+    if not candles:
+        return {}
+    closes = [c["close"] for c in candles]
+    times = [c["time"] for c in candles]
+
+    rsi_vals = _rsi_series(closes, rsi_period)
+    bb = _bb_series(closes, bb_period, bb_std)
+    macd = _macd_series(closes, macd_fast, macd_slow, macd_signal)
+
+    def to_tv(values):
+        return [{"time": t, "value": round(v, 6)} for t, v in zip(times, values)]
+
+    return {
+        "rsi": to_tv(rsi_vals),
+        "bb": {
+            "upper": to_tv(bb["upper"]),
+            "middle": to_tv(bb["middle"]),
+            "lower": to_tv(bb["lower"]),
+        },
+        "macd": {
+            "macd": to_tv(macd["macd"]),
+            "signal": to_tv(macd["signal"]),
+            "histogram": to_tv(macd["histogram"]),
+        },
+    }
 
 
 def compute_realized_volatility(closes: list) -> dict:
@@ -307,22 +538,35 @@ def compute_realized_volatility(closes: list) -> dict:
 
 
 def okx_long_short(inst_id: str) -> dict:
-    """Long/short account ratio from OKX. Uses full instId (e.g. BTC-USDT-SWAP)."""
+    """Long/short ratio via `okx market indicator top-long-short`."""
     if not inst_id:
         return {"status": "unavailable"}
-    # OKX rubik contract-player expects the currency, not the full instId
-    ccy = inst_id.split("-")[0]
-    url = f"{OKX_BASE}/rubik/stat/contracts/long-short-account-ratio/contract-player?instId={ccy}&period=1H"
-    items = okx_data(fetch(url))
-    if not items:
+    # The indicator uses spot instId (BTC-USDT not BTC-USDT-SWAP)
+    spot_id = "-".join(inst_id.split("-")[:2])  # BTC-USDT-SWAP → BTC-USDT
+    data = okx_cli(["market", "indicator", "top-long-short", spot_id])
+    if not data or not isinstance(data, list) or not data:
         return {"status": "unavailable"}
-    r = items[0]
-    return {
-        "status": "available",
-        "long_ratio": safe_float(r.get("longRatio")) if r.get("longRatio") else None,
-        "short_ratio": safe_float(r.get("shortRatio")) if r.get("shortRatio") else None,
-        "source": "okx",
-    }
+
+    # Parse nested indicator response
+    try:
+        entry = data[0].get("data", [{}])[0]
+        tf = entry.get("timeframes", {})
+        # Get the first available timeframe
+        for _, tf_data in tf.items():
+            indicators = tf_data.get("indicators", {})
+            ls_data = indicators.get("TOPLONGSHORT", [{}])
+            if ls_data:
+                vals = ls_data[0].get("values", {})
+                return {
+                    "status": "available",
+                    "long_ratio": safe_float(vals.get("longRatio")),
+                    "short_ratio": safe_float(vals.get("shortRatio")),
+                    "long_short_ratio": safe_float(vals.get("longShortRatio")),
+                    "source": "okx-cli",
+                }
+    except (IndexError, KeyError, TypeError):
+        pass
+    return {"status": "unavailable"}
 
 
 def okx_options_summary(inst_family: str) -> dict:
@@ -383,13 +627,13 @@ def okx_taker_volume(ccy: str) -> dict:
 
 
 def okx_futures_basis(swap_id: str, spot_id: str) -> dict:
-    """Futures basis (premium) — OKX swap price vs spot."""
-    swap_items = okx_data(fetch(f"{OKX_BASE}/market/ticker?instId={swap_id}"))
-    spot_items = okx_data(fetch(f"{OKX_BASE}/market/ticker?instId={spot_id}"))
-    if not swap_items or not spot_items:
+    """Futures basis (premium) via `okx market ticker` for swap vs spot."""
+    swap_data = okx_cli(["market", "ticker", swap_id])
+    spot_data = okx_cli(["market", "ticker", spot_id])
+    if not swap_data or not spot_data:
         return {"status": "unavailable"}
-    swap_price = safe_float(swap_items[0].get("last"))
-    spot_price = safe_float(spot_items[0].get("last"))
+    swap_price = safe_float(swap_data[0].get("last")) if isinstance(swap_data, list) and swap_data else 0
+    spot_price = safe_float(spot_data[0].get("last")) if isinstance(spot_data, list) and spot_data else 0
     if spot_price == 0:
         return {"status": "unavailable"}
     basis_pct = ((swap_price - spot_price) / spot_price) * 100
@@ -403,7 +647,7 @@ def okx_futures_basis(swap_id: str, spot_id: str) -> dict:
             else "backwardation (shorts paying premium)" if basis_pct < -0.01
             else "near parity"
         ),
-        "source": "okx",
+        "source": "okx-cli",
     }
 
 
@@ -677,113 +921,42 @@ def okx_skew(inst_family: str) -> dict:
     }
 
 
-# ═══════════════════════════════════════════════════════════════════
-# BINANCE APIs (FALLBACK)
-# ═══════════════════════════════════════════════════════════════════
+def okx_liquidation_proxy(inst_id: str) -> dict:
+    """Estimate liquidation pressure from L/S ratio movement.
 
-def binance_funding(symbol: str) -> dict:
-    """Funding rate fallback from Binance."""
-    data = fetch(f"{BINANCE_FAPI}/fapi/v1/fundingRate?symbol={symbol}&limit=1")
-    if is_error(data) or not data:
-        return {"status": "unavailable"}
-    item = data[0] if isinstance(data, list) else data
-    rate = safe_float(item.get("fundingRate"))
-    return {
-        "status": "available",
-        "rate": rate,
-        "rate_pct": round(rate * 100, 6),
-        "rate_annualized_pct": round(rate * 3 * 365 * 100, 2),
-        "source": "binance_fallback",
-    }
-
-
-def binance_oi(symbol: str) -> dict:
-    """Open interest fallback from Binance."""
-    data = fetch(f"{BINANCE_FAPI}/fapi/v1/openInterest?symbol={symbol}")
-    if is_error(data):
-        return {"status": "unavailable"}
-    return {
-        "status": "available",
-        "oi": safe_float(data.get("openInterest")),
-        "source": "binance_fallback",
-    }
-
-
-def binance_long_short(symbol: str) -> dict:
-    """Long/short + taker ratio from Binance (fallback)."""
-    has_data = False
-    result = {"source": "binance_fallback"}
-
-    top = fetch(f"{BINANCE_FAPI}/futures/data/topLongShortPositionRatio?symbol={symbol}&period=1h&limit=1")
-    if not is_error(top) and top:
-        item = top[0] if isinstance(top, list) else top
-        result["top_long_ratio"] = safe_float(item.get("longAccount"))
-        result["top_short_ratio"] = safe_float(item.get("shortAccount"))
-        has_data = True
-
-    glob = fetch(f"{BINANCE_FAPI}/futures/data/globalLongShortAccountRatio?symbol={symbol}&period=1h&limit=1")
-    if not is_error(glob) and glob:
-        item = glob[0] if isinstance(glob, list) else glob
-        result["global_long_ratio"] = safe_float(item.get("longAccount"))
-        result["global_short_ratio"] = safe_float(item.get("shortAccount"))
-        has_data = True
-
-    taker = fetch(f"{BINANCE_FAPI}/futures/data/takerlongshortRatio?symbol={symbol}&period=1h&limit=1")
-    if not is_error(taker) and taker:
-        item = taker[0] if isinstance(taker, list) else taker
-        result["taker_buy_sell_ratio"] = safe_float(item.get("buySellRatio"))
-        has_data = True
-
-    result["status"] = "available" if has_data else "unavailable"
-    return result
-
-
-def binance_liquidation_proxy(symbol: str) -> dict:
-    """Estimate liquidation pressure using Binance long/short ratio history.
-
-    Since Binance deprecated /fapi/v1/allForceOrders, we use the L/S ratio
-    trend as a proxy for liquidation pressure: sharp drops in the dominant
-    side suggest forced position closures.
+    Uses the long/short ratio. Sharp swings suggest forced closures.
     """
-    data = fetch(
-        f"{BINANCE_FAPI}/futures/data/globalLongShortAccountRatio?symbol={symbol}&period=1h&limit=12",
-        timeout=8,
-    )
-    if is_error(data) or not isinstance(data, list) or len(data) < 2:
+    ls = okx_long_short(inst_id)
+    if ls.get("status") != "available":
         return {"status": "unavailable"}
 
-    ratios = [safe_float(d.get("longShortRatio")) for d in data if isinstance(d, dict)]
-    if len(ratios) < 2:
+    long_r = safe_float(ls.get("long_ratio"))
+    short_r = safe_float(ls.get("short_ratio"))
+    ratio = safe_float(ls.get("long_short_ratio"))
+
+    # Simple heuristic from current L/S snapshot
+    if long_r == 0 and short_r == 0:
         return {"status": "unavailable"}
 
-    latest = ratios[0]  # most recent
-    avg = sum(ratios) / len(ratios)
-    max_r = max(ratios)
-    min_r = min(ratios)
-    swing = max_r - min_r
+    long_pct = round(long_r * 100, 1) if long_r else 50.0
 
-    # Detect if ratio swung hard (suggesting liquidation cascade)
-    if swing > 0.15:
-        pressure = "high — significant position unwind detected"
-    elif swing > 0.08:
-        pressure = "moderate — some forced closures likely"
+    if long_pct > 55:
+        pressure = "moderate — crowded long, liquidation risk above"
+        bias = "shorts under pressure"
+    elif long_pct < 45:
+        pressure = "moderate — crowded short, squeeze risk"
+        bias = "longs under pressure"
     else:
         pressure = "low — orderly market"
-
-    bias = ("longs under pressure" if latest < avg
-            else "shorts under pressure" if latest > avg
-            else "balanced")
+        bias = "balanced"
 
     return {
         "status": "available",
-        "latest_ls_ratio": round(latest, 4),
-        "avg_ls_ratio_12h": round(avg, 4),
-        "ratio_swing_12h": round(swing, 4),
+        "latest_ls_ratio": round(ratio, 4) if ratio else None,
         "pressure": pressure,
         "bias": bias,
-        "long_pct": round(latest / (latest + 1) * 100, 1) if latest > 0 else 50.0,
-        "data_points": len(ratios),
-        "source": "binance",
+        "long_pct": long_pct,
+        "source": "okx-cli",
     }
 
 
@@ -866,11 +1039,165 @@ def stablecoin_data() -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# PER-TOKEN AGGREGATOR (OKX-first with fallback)
+# ONCHAINOS — ON-CHAIN DEX / SMART MONEY DATA
+# ═══════════════════════════════════════════════════════════════════
+
+ONCHAINOS_CLI = os.environ.get("ONCHAINOS_CLI_PATH", os.path.expanduser("~/.local/bin/onchainos"))
+
+
+def _onchainos(args: list[str], timeout: int = 15) -> dict | list | None:
+    """Run onchainos CLI and return parsed JSON output.
+    OnchainOS outputs JSON by default — no extra flags needed."""
+    cmd = [ONCHAINOS_CLI] + args
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if result.returncode != 0:
+            return None
+        return json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
+        return None
+
+
+def onchain_smart_money_signals(chains: list[str] = None) -> dict:
+    """Aggregate smart money + whale buy/sell signals across chains.
+
+    Uses onchainos signal list for each chain, aggregates into
+    net buy/sell pressure and top movers.
+    """
+    if chains is None:
+        chains = ["ethereum", "solana", "base"]
+
+    all_signals = []
+    for chain in chains:
+        data = _onchainos([
+            "signal", "list", "--chain", chain,
+            "--wallet-type", "1,3",  # smart money + whales
+            "--min-amount-usd", "10000",
+        ])
+        if data and isinstance(data, dict):
+            items = data.get("data", [])
+            for s in items:
+                tok = s.get("token", {})
+                sold_pct = safe_float(s.get("soldRatioPercent"))
+                amount = safe_float(s.get("amountUsd"))
+                all_signals.append({
+                    "chain": chain,
+                    "symbol": tok.get("symbol", "?"),
+                    "amount_usd": amount,
+                    "action": "sell" if sold_pct > 50 else "buy",
+                    "wallet_type": "smart_money" if s.get("walletType") == "1" else "whale",
+                    "wallet_count": int(s.get("triggerWalletCount", 0)),
+                    "mcap": safe_float(tok.get("marketCapUsd")),
+                })
+
+    if not all_signals:
+        return {"status": "unavailable"}
+
+    # Aggregate net flow
+    buy_vol = sum(s["amount_usd"] for s in all_signals if s["action"] == "buy")
+    sell_vol = sum(s["amount_usd"] for s in all_signals if s["action"] == "sell")
+    net_flow = buy_vol - sell_vol
+    buy_count = sum(1 for s in all_signals if s["action"] == "buy")
+    sell_count = sum(1 for s in all_signals if s["action"] == "sell")
+
+    # Top 5 by amount
+    top_signals = sorted(all_signals, key=lambda x: -x["amount_usd"])[:5]
+
+    if buy_vol + sell_vol > 0:
+        buy_pct = round(buy_vol / (buy_vol + sell_vol) * 100, 1)
+    else:
+        buy_pct = 50.0
+
+    return {
+        "status": "available",
+        "total_signals": len(all_signals),
+        "buy_count": buy_count,
+        "sell_count": sell_count,
+        "buy_volume_usd": round(buy_vol, 2),
+        "sell_volume_usd": round(sell_vol, 2),
+        "net_flow_usd": round(net_flow, 2),
+        "buy_pct": buy_pct,
+        "sentiment": (
+            "strong buying" if buy_pct > 65
+            else "buying" if buy_pct > 55
+            else "strong selling" if buy_pct < 35
+            else "selling" if buy_pct < 45
+            else "balanced"
+        ),
+        "top_signals": [{
+            "chain": s["chain"],
+            "symbol": s["symbol"],
+            "action": s["action"],
+            "amount_usd": round(s["amount_usd"], 0),
+            "wallet_type": s["wallet_type"],
+            "wallets": s["wallet_count"],
+        } for s in top_signals],
+        "chains_scanned": chains,
+        "source": "onchainos",
+    }
+
+
+def onchain_hot_tokens() -> dict:
+    """Get trending tokens across chains from OnchainOS.
+
+    Returns top tokens by DEX volume (24h) with mcap > $10M.
+    Shows what's hot on-chain vs what's hot on CEX.
+    """
+    data = _onchainos([
+        "token", "hot-tokens",
+        "--rank-by", "5",        # sort by volume
+        "--time-frame", "4",     # 24h
+        "--market-cap-min", "10000000",  # >$10M mcap
+    ])
+    if not data or not isinstance(data, dict):
+        return {"status": "unavailable"}
+
+    items = data.get("data", [])
+    if not items:
+        return {"status": "unavailable"}
+
+    chain_map = {"1": "ETH", "56": "BSC", "501": "SOL", "8453": "BASE", "42161": "ARB", "137": "MATIC"}
+    tokens = []
+    for t in items[:12]:
+        chain_id = t.get("chainIndex", "")
+        tokens.append({
+            "symbol": t.get("tokenSymbol", "?"),
+            "chain": chain_map.get(chain_id, f"chain:{chain_id}"),
+            "price": safe_float(t.get("price")),
+            "change_24h_pct": safe_float(t.get("change")),
+            "volume_24h": safe_float(t.get("volume")),
+            "mcap": safe_float(t.get("marketCap")),
+            "liquidity": safe_float(t.get("liquidity")),
+            "txs_24h": int(t.get("txs", 0)),
+            "unique_traders": int(t.get("uniqueTraders", 0)),
+            "net_inflow_usd": safe_float(t.get("inflowUsd")),
+        })
+
+    # Aggregate stats
+    total_vol = sum(t["volume_24h"] for t in tokens)
+    net_inflow = sum(t["net_inflow_usd"] for t in tokens)
+    chains_active = list(set(t["chain"] for t in tokens))
+
+    return {
+        "status": "available",
+        "top_tokens": tokens,
+        "total_dex_volume_24h": round(total_vol, 0),
+        "net_inflow_usd": round(net_inflow, 0),
+        "chains_active": sorted(chains_active),
+        "token_count": len(tokens),
+        "source": "onchainos",
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# PER-TOKEN AGGREGATOR (OKX CeFi CLI primary)
 # ═══════════════════════════════════════════════════════════════════
 
 def analyze_token(symbol: str) -> dict:
-    """Fetch all available indicators for a token. OKX primary, Binance fallback."""
+    """Fetch all available indicators for a token via OKX CeFi CLI.
+
+    Uses concurrent CLI calls for speed.
+    """
     token = TOKEN_MAP.get(symbol.upper())
     if not token:
         return {"symbol": symbol, "error": f"Unknown token. Supported: {', '.join(sorted(TOKEN_MAP.keys()))}"}
@@ -885,97 +1212,48 @@ def analyze_token(symbol: str) -> dict:
 
     swap_id = token["okx_swap"]
     spot_id = token["okx_spot"]
-    bn_sym = token["binance"]
     ccy = symbol.upper()
 
-    # ── Ticker (OKX spot) ──
-    result["market_structure"]["ticker_24h"] = okx_ticker(spot_id)
+    # ── Parallel CLI calls for speed ──
+    futures = {}
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures["ticker"] = pool.submit(okx_ticker, spot_id)
+        futures["candles_vol"] = pool.submit(okx_candle_history, spot_id, "1H", 24)
+        futures["funding"] = pool.submit(okx_funding, swap_id)
+        futures["funding_hist"] = pool.submit(okx_funding_history, swap_id, 6)
+        futures["oi"] = pool.submit(okx_open_interest, swap_id)
+        futures["oi_hist"] = pool.submit(okx_oi_history, swap_id)
+        futures["long_short"] = pool.submit(okx_long_short, swap_id)
+        futures["taker"] = pool.submit(okx_taker_volume, ccy)
+        futures["basis"] = pool.submit(okx_futures_basis, swap_id, spot_id)
+        futures["options"] = pool.submit(okx_options_summary, token["okx_family"])
 
-    # ── Realized Volatility (from hourly candles) ──
-    closes = okx_candle_history(spot_id, bar="1H", limit=24)
+    # ── Collect results ──
+    result["market_structure"]["ticker_24h"] = futures["ticker"].result()
+    closes = futures["candles_vol"].result()
     result["market_structure"]["realized_vol"] = compute_realized_volatility(closes)
+    result["derivatives"]["funding"] = futures["funding"].result()
+    result["derivatives"]["funding_history"] = futures["funding_hist"].result()
+    result["derivatives"]["open_interest"] = futures["oi"].result()
+    result["derivatives"]["oi_history"] = futures["oi_hist"].result()
+    result["market_structure"]["long_short"] = futures["long_short"].result()
+    result["market_structure"]["taker_volume"] = futures["taker"].result()
+    result["derivatives"]["basis"] = futures["basis"].result()
+    result["derivatives"]["options"] = futures["options"].result()
 
-    # ── Funding (OKX first → Binance fallback) ──
-    funding = okx_funding(swap_id)
-    if funding["status"] == "unavailable":
-        funding = binance_funding(bn_sym)
-    result["derivatives"]["funding"] = funding
+    # ── Liquidation proxy (from L/S data) ──
+    result["market_structure"]["liquidations"] = okx_liquidation_proxy(swap_id)
 
-    # ── Funding History (OKX, for trend analysis) ──
-    result["derivatives"]["funding_history"] = okx_funding_history(swap_id, limit=6)
-
-    # ── Open Interest (OKX first → Binance fallback) ──
-    oi = okx_open_interest(swap_id)
-    if oi["status"] == "unavailable":
-        oi = binance_oi(bn_sym)
-    result["derivatives"]["open_interest"] = oi
-
-    # ── OI History / Delta ──
-    result["derivatives"]["oi_history"] = okx_oi_history(ccy)
-
-    # ── Cross-exchange OI comparison ──
-    bn_oi = binance_oi(bn_sym)
-    if oi.get("source") == "okx" and bn_oi["status"] == "available":
-        result["derivatives"]["cross_exchange_oi"] = {
-            "status": "available",
-            "okx_oi": oi.get("oi", 0),
-            "binance_oi": bn_oi.get("oi", 0),
-            "source": "okx+binance",
-        }
-
-    # ── MVRV + Realized Price (BTC/ETH only — CoinMetrics free) ──
+    # ── MVRV + Realized Price (BTC/ETH only — CoinMetrics) ──
     spot_price = (result["market_structure"].get("ticker_24h") or {}).get("price", 0)
     if ccy in ("BTC", "ETH"):
         result["on_chain"] = {"mvrv": coinmetrics_mvrv(ccy, spot_price)}
 
-    # ── Options (Tier 1 only — OKX) ──
-    result["derivatives"]["options"] = okx_options_summary(token["okx_family"])
-
-    # ── Gamma Wall (from full option chain) ──
+    # ── Gamma Wall + Skew (direct HTTP — complex option chain computation) ──
     if token["okx_family"]:
         result["derivatives"]["gamma_wall"] = okx_gamma_wall(token["okx_family"], spot_price)
-
-    # ── Options Skew (25-delta risk reversal) ──
-    if token["okx_family"]:
         result["derivatives"]["skew"] = okx_skew(token["okx_family"])
 
-    # ── Futures Basis (OKX swap vs spot) ──
-    result["derivatives"]["basis"] = okx_futures_basis(swap_id, spot_id)
-
-    # ── Long/Short Ratio (OKX first → Binance fallback) ──
-    ls = okx_long_short(swap_id)
-    if ls["status"] == "unavailable":
-        ls = binance_long_short(bn_sym)
-    result["market_structure"]["long_short"] = ls
-
-    # ── Taker Buy/Sell (OKX, using ccy) ──
-    result["market_structure"]["taker_volume"] = okx_taker_volume(ccy)
-
-    # ── Liquidations (Binance) ──
-    result["market_structure"]["liquidations"] = binance_liquidation_proxy(bn_sym)
-
-    # ── Cross-exchange funding comparison ──
-    if funding.get("source") == "okx":
-        bn_funding = binance_funding(bn_sym)
-        if bn_funding["status"] == "available":
-            result["derivatives"]["binance_funding"] = bn_funding
-            # Funding divergence signal
-            okx_rate = funding.get("rate", 0)
-            bn_rate = bn_funding.get("rate", 0)
-            divergence = abs(okx_rate - bn_rate)
-            result["derivatives"]["funding_divergence"] = {
-                "status": "available",
-                "okx_rate_pct": round(okx_rate * 100, 6),
-                "binance_rate_pct": round(bn_rate * 100, 6),
-                "divergence_pct": round(divergence * 100, 6),
-                "signal": (
-                    "high divergence — potential arb opportunity" if divergence > 0.0003
-                    else "moderate divergence" if divergence > 0.0001
-                    else "aligned"
-                ),
-            }
-
-    time.sleep(0.15)  # rate limit courtesy
     return result
 
 
@@ -990,8 +1268,8 @@ def main():
 
     output = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "version": "2.0",
-        "data_priority": "OKX primary, Binance fallback",
+        "version": "3.0",
+        "data_priority": "OKX CeFi CLI primary, HTTP for options chain + external macro",
         "tokens": {},
         "macro": {},
     }
@@ -1005,9 +1283,9 @@ def main():
     # Per-token
     for t in tokens:
         t = t.upper()
-        print(f"Fetching {t} (OKX primary, Binance fallback)...", file=sys.stderr)
+        print(f"Fetching {t} (OKX CeFi CLI)...", file=sys.stderr)
         output["tokens"][t] = analyze_token(t)
-        time.sleep(0.2)
+        time.sleep(0.1)
 
     # Summary
     available = 0

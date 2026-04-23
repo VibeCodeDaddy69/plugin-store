@@ -797,9 +797,17 @@ jobs:
       # ── Clone fork branch, inject pre-flight, push back ──
       - name: Inject pre-flight and push
         if: steps.build.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORK_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          FORK_URL="https://x-access-token:${{ github.token }}@github.com/${{ github.event.pull_request.head.repo.full_name }}.git"
-          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+          # Validate branch name (prevent shell injection via crafted branch names)
+          if ! echo "$PR_BRANCH" | grep -qE '^[a-zA-Z0-9/_.-]+$'; then
+            echo "::error::Invalid branch name characters detected — aborting for security"
+            exit 1
+          fi
+          FORK_URL="https://x-access-token:${GH_TOKEN}@github.com/${FORK_REPO}.git"
           PLUGIN_NAME="${{ needs.collect.outputs.plugin_name }}"
           PLUGIN_DIR="${{ needs.collect.outputs.plugin_dir }}"
 

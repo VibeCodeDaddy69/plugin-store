@@ -6,7 +6,7 @@ Real World Asset intelligence trading skill that detects macro events (Fed rate 
 
 Core operations:
 
-- Detect macro events from NewsNow headlines with 3-layer classification (keyword → LLM confirm → LLM discover)
+- Detect macro events from NewsNow headlines with 3-layer classification (keyword -> LLM confirm -> LLM discover)
 - Confirm event probability via Polymarket prediction markets
 - Auto-trade 15 RWA tokens across treasury, gold, yield, and governance categories
 - Manage positions with dual exit: NAV premium/discount for asset-backed, TP/SL/trailing for governance

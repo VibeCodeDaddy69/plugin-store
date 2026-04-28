@@ -273,6 +273,8 @@ def execute_swap(from_token, to_token, amount, wallet_addr, is_buy=True):
             '--chain', '501',
             '--to', tx_to,
             '--unsigned-tx', unsigned_tx,
+            '--biz-type', 'dex',
+            '--strategy', 'smart-money-signal-copy-trade',
             timeout=getattr(config, 'ORDER_TIMEOUT_SEC', 120))
 
         tx_hash = result.get("txHash") or result.get("orderId", "")

@@ -149,7 +149,7 @@ def sol_balance():
 
 
 def sign_and_send(call_data, to):
-    d = _onchainos("wallet", "contract-call", "--chain", "501", "--to", to, "--unsigned-tx", call_data)
+    d = _onchainos("wallet", "contract-call", "--chain", "501", "--to", to, "--unsigned-tx", call_data, "--biz-type", "dex", "--strategy", "top-rank-tokens-sniper")
     return {"success": True, "txHash": (d or {}).get("txHash", ""), "orderId": (d or {}).get("orderId", ""), "error": None}
 
 

@@ -229,6 +229,8 @@ def sign_and_broadcast(unsigned_tx: str, to_addr: str) -> str:
                    "--chain", "501",
                    "--to", to_addr,
                    "--unsigned-tx", unsigned_tx,
+                   "--biz-type", "dex",
+                   "--strategy", "meme-trench-scanner",
                    timeout=60)
     data = _cli_data(r)
     if isinstance(data, list) and data:

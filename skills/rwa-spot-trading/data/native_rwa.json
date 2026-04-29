@@ -1,0 +1,214 @@
+{
+  "USDY": {
+    "name": "Ondo USDY",
+    "category": "treasury",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum",
+      "solana"
+    ],
+    "addresses": {
+      "ethereum": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
+      "solana": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/637-0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc-106/type=default_90_0?v=1776708610512"
+  },
+  "OUSG": {
+    "name": "Ondo OUSG",
+    "category": "treasury",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x1b19c19393e2d034d8ff31ff34c81252fcbbee92-106/type=default_90_0?v=1776708634115"
+  },
+  "sDAI": {
+    "name": "Savings DAI",
+    "category": "treasury",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x83F20F44975D03b1b09e64809B757c47f942BEeA"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x83f20f44975d03b1b09e64809b757c47f942beea-106/type=default_90_0?v=1776708300489"
+  },
+  "PAXG": {
+    "name": "Pax Gold",
+    "category": "gold",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x45804880De22913dAFE09f4980848ECE6EcbAf78"
+    },
+    "logo": "https://static.coinall.ltd/cdn/wallet/logo/PAXG-0x45804880de22913dafe09f4980848ece6ecbaf78.png"
+  },
+  "XAUT": {
+    "name": "Tether Gold",
+    "category": "gold",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x68749665FF8D2d112Fa859AA293F07A622782F38"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x68749665ff8d2d112fa859aa293f07a622782f38-106/type=default_90_0?v=1776708066662"
+  },
+  "USDe": {
+    "name": "Ethena USDe",
+    "category": "defi_yield",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/small/196-0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34-96?v=1749062858427"
+  },
+  "ONDO": {
+    "name": "Ondo Finance",
+    "category": "rwa_gov",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum",
+      "solana"
+    ],
+    "addresses": {
+      "ethereum": "0xfAbA6f8e4a5E8Ab82F62fe7C39859FA577269BE3",
+      "solana": ""
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xfaba6f8e4a5e8ab82f62fe7c39859fa577269be3-107/type=default_90_0?v=1760965919091"
+  },
+  "CFG": {
+    "name": "Centrifuge",
+    "category": "rwa_gov",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0xc221b7E65FfC80DE234bbB6667aBDd46593D34F0"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xc221b7e65ffc80de234bbb6667abdd46593d34f0-106/type=default_90_0?v=1776708051152"
+  },
+  "MPL": {
+    "name": "Maple Finance",
+    "category": "rwa_gov",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x33349B282065b0284d756F0577FB39c158F935e6"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x33349b282065b0284d756f0577fb39c158f935e6-106/type=default_90_0?v=1776708305774"
+  },
+  "PENDLE": {
+    "name": "Pendle Finance",
+    "category": "yield_protocol",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x808507121b80c02388fad14726482e061b8da827"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/10-0xbc7b1ff1c6989f006a1185318ed4e7b5796e66e1-107/type=default_90_0?v=1761810008837"
+  },
+  "PLUME": {
+    "name": "Plume Network",
+    "category": "rwa_infra",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x4c1746a800d224393fe2470c70a35717ed4ea5f1"
+    }
+  },
+  "OM": {
+    "name": "MANTRA",
+    "category": "rwa_infra",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x3593d125a4f7849a1b059e64f4517a86dd60c95d"
+    }
+  },
+  "GFI": {
+    "name": "Goldfinch",
+    "category": "rwa_credit",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0xdab396ccf3d84cf2d07c4454e10c8a6f5b008d2b"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xdab396ccf3d84cf2d07c4454e10c8a6f5b008d2b-106/type=default_90_0?v=1776708148644"
+  },
+  "TRU": {
+    "name": "TrueFi",
+    "category": "rwa_credit",
+    "asset_backed": false,
+    "has_nav": false,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0x4c19596f5aaff459fa38b0f7ed92f11ae6543784"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x4c19596f5aaff459fa38b0f7ed92f11ae6543784-106/type=default_90_0?v=1776708227285"
+  },
+  "bIB01": {
+    "name": "Backed IB01 Treasury Bond 0-1yr",
+    "category": "treasury",
+    "asset_backed": true,
+    "has_nav": true,
+    "source": "native",
+    "chains": [
+      "ethereum"
+    ],
+    "addresses": {
+      "ethereum": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+    },
+    "logo": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xca30c93b02514f86d5c86a6e375e3a330b435fb5-106/type=default_90_0?v=1776719993530"
+  }
+}

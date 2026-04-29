@@ -432,6 +432,8 @@ def sign_and_broadcast(unsigned_tx: str, to_addr: str) -> str:
                    "--chain", C.CHAIN_INDEX,
                    "--to", to_addr,
                    "--unsigned-tx", unsigned_tx,
+                   "--biz-type", "dex",
+                   "--strategy", "wallet-tracker-mcap",
                    timeout=60)
     data = _cli_data(r)
     if isinstance(data, list) and data:

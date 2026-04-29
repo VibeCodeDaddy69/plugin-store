@@ -191,6 +191,8 @@ class BagsAdapter(LaunchpadAdapter):
                 "--chain", "501",
                 "--to", to_address or wallet_address,
                 "--unsigned-tx", serialized_tx,
+                "--biz-type", "dex",
+                "--strategy", "one-click-token-launch",
             ]
             proc = await asyncio.create_subprocess_exec(
                 *cmd,

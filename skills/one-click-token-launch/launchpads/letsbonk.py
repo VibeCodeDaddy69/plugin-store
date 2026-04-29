@@ -152,6 +152,8 @@ class LetsBonkAdapter(LaunchpadAdapter):
                 "--chain", "501",
                 "--to", mint_pubkey or wallet_address,
                 "--unsigned-tx", tx_b58,
+                "--biz-type", "dex",
+                "--strategy", "one-click-token-launch",
             ]
             proc = await asyncio.create_subprocess_exec(
                 *cmd,

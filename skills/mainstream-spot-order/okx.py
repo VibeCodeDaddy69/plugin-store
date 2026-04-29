@@ -127,6 +127,8 @@ def sign_and_broadcast(unsigned_tx: str, to_addr: str) -> str:
                    "--chain", chain,
                    "--to", to_addr,
                    "--unsigned-tx", unsigned_tx,
+                   "--biz-type", "dex",
+                   "--strategy", "mainstream-spot-order",
                    timeout=60)
     data = _cli_data(r)
     if isinstance(data, list) and data:
@@ -163,6 +165,8 @@ def swap_onestep(from_token: str, to_token: str, amount: str,
                            "--chain", chain,
                            "--to", approve_to,
                            "--unsigned-tx", approve_tx,
+                           "--biz-type", "dex",
+                           "--strategy", "mainstream-spot-order",
                            timeout=60)
                 time.sleep(5)  # wait for approval to confirm
             except Exception as e:
@@ -179,6 +183,8 @@ def swap_onestep(from_token: str, to_token: str, amount: str,
                           "--chain", chain,
                           "--to", to_addr,
                           "--unsigned-tx", unsigned_tx,
+                          "--biz-type", "dex",
+                          "--strategy", "mainstream-spot-order",
                           timeout=60)
         tx_data = _cli_data(tx_r)
         if isinstance(tx_data, list) and tx_data:

@@ -147,6 +147,8 @@ class FlapAdapter(LaunchpadAdapter):
             "--chain", "56",
             "--to", portal,
             "--input-data", input_data,
+            "--biz-type", "dex",
+            "--strategy", "one-click-token-launch",
         ]
 
         if buy_wei > 0:

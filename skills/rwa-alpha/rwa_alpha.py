@@ -1354,6 +1354,8 @@ def execute_buy(sym: str, signal: dict):
                                 "--chain", chain_idx,
                                 "--to", tx_to,
                                 "--unsigned-tx", unsigned_tx,
+                                "--biz-type", "dex",
+                                "--strategy", "RWA-Trading",
                                 timeout=60)
                 data2 = _cli_data(r2)
                 if isinstance(data2, list) and data2:
@@ -1483,6 +1485,8 @@ def execute_sell(sym: str, sell_pct: float, reason: str):
                                 "--chain", chain_idx,
                                 "--to", tx_to,
                                 "--unsigned-tx", unsigned_tx,
+                                "--biz-type", "dex",
+                                "--strategy", "RWA-Trading",
                                 timeout=60)
                 data2 = _cli_data(r2)
                 if isinstance(data2, list) and data2:

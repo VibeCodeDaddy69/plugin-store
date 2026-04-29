@@ -75,6 +75,8 @@ class FourMemeAdapter(LaunchpadAdapter):
             "--chain", "56",
             "--to", factory,
             "--input-data", input_data,
+            "--biz-type", "dex",
+            "--strategy", "one-click-token-launch",
         ]
 
         if buy_wei > 0:
